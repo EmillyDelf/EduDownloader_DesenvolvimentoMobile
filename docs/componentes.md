@@ -2,6 +2,8 @@
 
 Implementação local na branch `feature/john-componentes`, em JavaScript, sem dependências novas e sem mudanças de navegação ou configuração.
 
+As seções iniciais registram a entrega e a aprovação da GOAL 01. A seção GOAL 02, ao final, registra a implementação e o estado atual do menu inferior.
+
 ## Arquivos
 
 - Preservado sem alterações: `src/components/Button.js`.
@@ -22,7 +24,8 @@ Implementação local na branch `feature/john-componentes`, em JavaScript, sem d
 | `LoadingIndicator` | `size`, padrão `'large'`; use `'small'` ou `'large'` em ambas as plataformas. `message`, padrão `'Carregando...'`; uma string vazia oculta a mensagem visual e mantém o nome acessível. O componente representa um carregamento em andamento. |
 | `ProgressBar` | `progress`, número de 0 a 100, padrão `0`; `showPercentage`, padrão `true`; `accessibilityLabel`, padrão `'Progresso'`. Valores finitos são limitados ao intervalo; outros valores, inclusive strings numéricas, viram zero. A largura preserva casas decimais e o texto arredonda para o inteiro mais próximo. |
 | `ErrorMessage` | `message`; `onRetry` opcional; `retryLabel`, padrão `'Tentar novamente'`. Sem mensagem, não renderiza conteúdo. O texto identifica o erro e tem papel acessível de alerta; a ação reutiliza `Button`. |
-| `ConfirmationDialog` | `visible`, padrão `false`; `title`, padrão `'Confirmar operação'`; `description` opcional; `onConfirm`, `onCancel`; `confirmLabel`, padrão `'Confirmar'`; `cancelLabel`, padrão `'Cancelar'`. O chamador controla a visibilidade e deve fechá-lo nas ações. Voltar do Android e escape de acessibilidade chamam `onCancel`. Nenhuma ação é executada ao renderizar. |
+| `ConfirmationDialog` | `visible`, padrão `false`; `title`, padrão `'Confirmar operação'`; `description` opcional; `onConfirm()` e `onCancel()` obrigatórios quando visível; `confirmLabel`, padrão `'Confirmar'`; `cancelLabel`, padrão `'Cancelar'`. O chamador controla a visibilidade e deve fechá-lo nas ações. Voltar do Android e escape de acessibilidade chamam `onCancel`. Callbacks inválidos geram `TypeError` antes de abrir. Nenhuma ação é executada ao renderizar. |
+| `BottomNavigation` | `activeTab`, padrão `'home'`, identifica a seleção; `onTabPress(tabId)` comunica o identificador pressionado. O componente não muda a seleção nem configura rotas. Detalhes da GOAL 02 abaixo. |
 
 Exemplo de uso em uma tela em `src/screens/`:
 
@@ -142,3 +145,202 @@ Após a confirmação explícita de John, os bytes da cópia original foram rest
 Não há alterações nos arquivos previamente versionados: `App.js` foi restaurado. Permanecem novos os sete componentes, o arquivo de testes e este relatório. `Button.js`, dependências, lockfile, configurações e navegação continuam intactos. O backup está ignorado em `.expo/`.
 
 Nenhum commit, push, merge, rebase, Pull Request ou publicação foi realizado. Os arquivos novos estão disponíveis para revisão e commit manual pelo GitHub Desktop.
+
+## GOAL 02 — Menu inferior
+
+### Componente e propriedades
+
+`src/components/BottomNavigation.js` apresenta cinco abas igualmente distribuídas. A seleção é controlada pela tela através de `activeTab`; cada toque chama `onTabPress` com o identificador correspondente. Pressionar a aba já ativa também comunica o toque. O componente não executa navegação e não depende de Expo Router ou React Navigation.
+
+| Aba | Identificador | Ícone local | Nó de origem do ícone |
+| --- | --- | --- | --- |
+| Início | `home` | `assets/navigation/home.png` | `68:78` |
+| Downloads | `downloads` | `assets/navigation/downloads.png` | `68:154` |
+| PDF | `pdf` | `assets/navigation/pdf.png` | `68:87` |
+| Histórico | `history` | `assets/navigation/history.png` | `68:93` |
+| Perfil | `profile` | `assets/navigation/profile.png` | `68:98` |
+
+`activeTab` assume `'home'` quando omitido. Um identificador desconhecido não seleciona nenhuma aba. `onTabPress` é usado para integrar o controle à tela; sua ausência não provoca erro de toque, mas não produz mudança alguma.
+
+As abas têm papel acessível `tab`, nome e estado `selected`; o agrupamento tem papel `tablist`. Os ícones são decorativos para leitores de tela. O feedback de pressão reduz a opacidade. Cada área ocupa um quinto da largura útil, com altura mínima de 70 e crescimento conforme o texto. Os rótulos permitem quebra de linha e ampliação de fonte.
+
+O componente usa `SafeAreaView` da dependência já instalada para proteger as bordas inferior e laterais. A aplicação deve oferecer um único `SafeAreaProvider` na raiz. Evite aplicar novamente a proteção inferior no contêiner que envolve o menu, para não duplicar o espaço. A [documentação do SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/safe-area-context/) orienta essa composição sem Expo Router.
+
+Exemplo mínimo, sem navegação real:
+
+```jsx
+import React, { useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import BottomNavigation from './src/components/BottomNavigation';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('home');
+
+  return (
+    <SafeAreaProvider>
+      <View style={styles.screen}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.content}>
+          <Text>{activeTab}</Text>
+        </SafeAreaView>
+        <BottomNavigation activeTab={activeTab} onTabPress={setActiveTab} />
+      </View>
+    </SafeAreaProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#FFFFFF' },
+  content: { flex: 1 },
+});
+```
+
+### Figma e limites visuais
+
+Foram consultados contexto de design e imagens de referência de todos os nós solicitados:
+
+- `68:76`: Downloads selecionado.
+- `68:148`: PDF selecionado.
+- `68:233`: Histórico selecionado.
+- `68:314`: Perfil selecionado.
+- `20:2`: tela inicial, com Início selecionado; somente seu menu foi considerado no escopo.
+
+O layout adota o padrão comum às quatro primeiras barras: fundo `#F8FAFC`, texto e ícones inativos `#64748B`, seleção `#24AF42`, rótulos de tamanho 12 com peso normal/600, ícones de 22 × 22, espaço de 7 entre ícone e rótulo e altura mínima de 70, antes da área segura. Os posicionamentos absolutos de largura 440 do protótipo foram adaptados para cinco áreas flexíveis iguais.
+
+As dependências e os assets existentes foram verificados primeiro. Não há `@expo/vector-icons`, `react-native-svg` ou `expo-image` instalados, nem ícones de navegação nos assets anteriores. A primeira exportação em PNG incorporou um fundo opaco, detectado na revisão independente. Os arquivos foram substituídos por exportações diretas do conteúdo vetorial dos mesmos nós, usando `exportAsync` com `contentsOnly: true` e limites originais, sem alterar o Figma ou redesenhar os ícones. Agora o fundo é transparente. O `Image` nativo continua carregando assets locais e aplicando `tintColor` somente ao desenho; não há URLs temporárias em execução.
+
+Diferenças que dependem de validação de Paulo:
+
+- O protótipo usa Inter; o aplicativo continua usando fontes nativas, sem instalação de fontes. As métricas dos rótulos podem variar.
+- O menu de `20:2` usa outro fundo, tons de inativo, posicionamentos e imagens. Foi mantido o padrão consistente das outras quatro telas, inclusive para Início.
+- Os PNGs agora têm versões 1x (22 × 22), `@2x` (44 × 44) e `@3x` (66 × 66), exportadas dos vetores originais, com transparência real e antialiasing. O Metro seleciona a densidade adequada; o layout permanece em 22 × 22. Nenhuma ampliação artificial do PNG antigo ou biblioteca nova foi utilizada.
+- Em larguras menores e fontes ampliadas, o menu pode crescer para acomodar os rótulos. A área segura acrescenta o espaço necessário ao sistema, sem fixar a barra sobre os controles nativos.
+
+### Arquivos desta etapa
+
+- Criado: `src/components/BottomNavigation.js`.
+- Criados: os cinco PNGs em `assets/navigation/` listados acima.
+- Atualizado: `tests/components.test.cjs`, preservando os dez testes anteriores e acrescentando seis testes do menu.
+- Atualizado: este documento, preservando o registro da GOAL 01.
+- Restaurado ao conteúdo original após aprovação: `App.js`, que exibiu temporariamente seleção simulada, nome da aba atual e contador de toques.
+- Apoio local ignorado pelo Git: `.expo/bottom-navigation-test/`, contendo backup original, hashes de referência e hash da demonstração.
+
+Os oito componentes anteriores, configurações, dependências e lockfile foram preservados. Nenhuma tela funcional ou rota foi criada.
+
+### Resultados locais
+
+`node --test tests/components.test.cjs`: **16 testes passaram**, incluindo os dez anteriores. Os seis novos verificam as cinco opções e assets locais, cada seleção, identificadores dos callbacks e ausência de mudança interna de estado, acessibilidade, feedback de pressão e áreas flexíveis, valores padrão e identificadores desconhecidos.
+
+Os testes leem os PNGs e conferem sua assinatura, dimensões e os slots de 22 × 22. Continuam sendo testes isolados com elementos nativos simulados; não comprovam desenho físico, largura de toque calculada no aparelho ou funcionamento de leitores de tela.
+
+- Sintaxe JSX do menu e da demonstração: passou.
+- Compilação individual do menu para Android no Metro: HTTP 200.
+- Demonstração completa para Android e iOS no Metro: HTTP 200 em ambas.
+- Após aprovação e restauração: os 16 testes passaram novamente; o `App.js` original compilou para Android no Metro com HTTP 200. Os hashes dos arquivos preservados coincidem com o registro anterior à GOAL 02.
+- As limitações de lint/typecheck descritas na GOAL 01 continuam presentes. Nenhuma ferramenta adicional foi instalada.
+
+### Demonstração aprovada e restauração concluída
+
+A demonstração temporária começou em Início, exibiu o nome da aba selecionada e contou todos os toques, inclusive toques repetidos na mesma aba. O menu foi posicionado abaixo do conteúdo, sem sobreposição, com proteção da área segura. Nenhuma rota foi alterada. Após a aprovação de John, `App.js` foi restaurado ao original; os comandos abaixo agora abrem a tela inicial original, sem o menu de demonstração.
+
+O Metro continua disponível no endereço mostrado no terminal, inicialmente `exp://192.168.0.7:8081`. Para iniciar novamente, utilize `npx expo start` ou, se persistir a falha do launcher, `node node_modules/expo/bin/cli start`. Conecte computador e celular à mesma rede Wi-Fi e abra o projeto no Expo Go compatível com SDK 58.
+
+Roteiro utilizado no teste no aparelho:
+
+1. Confira Início selecionado inicialmente.
+2. Toque Downloads, PDF, Histórico e Perfil, depois retorne a Início.
+3. Em cada toque, confira o nome central, o verde/peso do rótulo e ícone selecionados e o contador.
+4. Toque repetidamente a mesma aba: ela deve continuar selecionada e o contador deve aumentar.
+5. Observe o feedback durante a pressão e confira se toda a área de cada aba responde ao toque.
+6. Confira que a barra fica acima dos botões/gestos do Android ou do indicador inferior do iPhone. Se possível, teste também fontes ampliadas e identificação/seleção com TalkBack ou VoiceOver.
+
+**Rodada do menu aprovada por John em 8 de novembro de 2026:** “Todos passaram; pode restaurar App.js”. A confirmação abrange o teste das cinco abas, toques repetidos, destaque de seleção e posição acima da navegação do sistema no aparelho utilizado. A plataforma não foi informada, e não se presume aprovação visual em ambas as plataformas nem teste específico com leitores de tela.
+
+O original foi preservado byte a byte em `.expo/bottom-navigation-test/App.js.original`, com SHA-256:
+
+```text
+23e440ce44246cc6a15a4010211a9bdcf3618ec8f6abd3bf5d0c5116d6906e28
+```
+
+Após a confirmação explícita de John, foi verificado que `App.js` ainda correspondia ao hash da demonstração, sem edições posteriores. Os bytes do backup foram restaurados, com igualdade byte a byte e SHA-256 original conferidos. Os nove componentes e os cinco ícones permaneceram intactos durante a restauração.
+
+### Git atual da GOAL 02
+
+Branch: `feature/john-componentes`. `App.js` está restaurado e não apresenta alterações no Git. Permanecem modificados `tests/components.test.cjs` e `docs/componentes.md`; arquivos novos: `src/components/BottomNavigation.js` e seus cinco ícones em `assets/navigation/`. Nenhum commit, push, merge, rebase, Pull Request, publicação ou alteração no Trello foi realizado.
+
+## GOAL 02 — Revisão final antes do commit
+
+Esta revisão corrige os ícones e esclarece o cancelamento do diálogo. John aprovou também esta rodada no Expo Go e autorizou a restauração do `App.js`, já concluída.
+
+### Transparência e densidade dos ícones
+
+Os cinco PNGs anteriores tinham todos os 484 pixels opacos, incluindo o fundo `#F8FAFC`. Os testes antigos só conferiam assinatura e dimensões. Isso permitia que `tintColor` colorisse o quadrado inteiro.
+
+Os mesmos nós vetoriais do Figma, listados na tabela das abas, foram exportados sem o contexto de fundo, com `contentsOnly: true`, `useAbsoluteBounds: true` e escalas 1, 2 e 3. As cores, abas, identificadores e callbacks do menu não foram alterados. Foram substituídos os cinco arquivos base e acrescentados dez arquivos `@2x.png`/`@3x.png` em `assets/navigation/`. O `BottomNavigation.js` continua intacto e referencia os arquivos base, permitindo a seleção de densidade pelo Metro.
+
+A verificação usa `PNG.sync.read` de `pngjs`, já disponível nas dependências locais do Expo. Ela decodifica os pixels dos 15 arquivos e exige mais de 25% de pixels totalmente transparentes, desenho visível e quatro cantos transparentes, além das dimensões corretas. Há também um caso negativo que gera um PNG RGBA totalmente opaco e confirma sua rejeição. A existência de um canal alfa, isoladamente, não é aceita como prova de transparência.
+
+Antes de substituir os assets, o teste novo falhou com `Icon background must be transparent`. Após a exportação correta, passou em todas as densidades.
+
+### Contrato seguro de ConfirmationDialog
+
+Quando `visible` for `true`, **`onCancel` e `onConfirm` devem ser funções**. Caso contrário, o componente lança um `TypeError` descritivo antes de criar o modal. Quando oculto, retorna `null` e não exige callbacks ainda. Não há função vazia padrão que possa deixar o modal aberto sem ação de cancelamento.
+
+- Botão Cancelar, `onRequestClose` e escape de acessibilidade usam a mesma função interna, que chama `onCancel()` uma vez por evento.
+- Botão Confirmar chama apenas `onConfirm()`.
+- Os callbacks são chamados sem argumentos, sem encaminhar eventos nativos.
+- O chamador deve definir `visible` como `false` em ambos os callbacks para fechar o diálogo. O componente continua controlado por propriedades e não fecha sozinho.
+- Não há execução automática, inclusive ao renderizar novamente.
+
+A [documentação do Modal](https://reactnative.dev/docs/modal#onrequestclose) exige `onRequestClose` no Android para tratar o voltar do sistema. Não foi adicionado `BackHandler`, pois o próprio `Modal` recebe esse evento. Os estilos e a aparência do diálogo foram preservados.
+
+Exemplo dos callbacks:
+
+```jsx
+function handleCancel() {
+  setDialogVisible(false);
+}
+
+function handleConfirm() {
+  setDialogVisible(false);
+  // Executar somente a ação explicitamente confirmada.
+}
+
+<ConfirmationDialog
+  visible={dialogVisible}
+  onCancel={handleCancel}
+  onConfirm={handleConfirm}
+/>
+```
+
+### Verificações da revisão
+
+`node --test tests/components.test.cjs`: **21 testes passaram**, preservando os 16 anteriores. Os cinco novos testes cobrem transparência nas três densidades, rejeição de PNG opaco e o contrato/caminhos dos callbacks do diálogo. Os testes continuam isolados, com elementos nativos simulados; a aprovação do teste físico foi fornecida por John nesta rodada.
+
+A compilação individual de `BottomNavigation` e `ConfirmationDialog` para Android passou pelo Metro. As imagens agora são reconhecidas nas escalas `[1, 2, 3]`, com dimensões lógicas 22 × 22. Nenhuma dependência, configuração ou outro componente foi alterado.
+
+A demonstração conjunta também compilou para Android e iOS (HTTP 200 em ambas). Isso não substitui a verificação visual no Expo Go. Lint e typecheck seguem com as limitações já registradas; nenhuma ferramenta adicional foi instalada.
+
+### Demonstração da revisão — aprovada e restaurada
+
+A demonstração temporária mostrou o menu corrigido e abriu a confirmação, com contadores separados de cancelamentos e confirmações. Não foram criadas rotas reais nem operações sobre arquivos. O `App.js` já foi restaurado ao original; abrir o aplicativo agora mostra novamente a tela inicial original, sem essa demonstração.
+
+Durante o teste, foi utilizado o endereço do Metro no Expo Go, inicialmente `exp://192.168.0.7:8081`, com celular e computador na mesma rede Wi-Fi. Para iniciar o servidor novamente, use `npx expo start` ou o CLI direto `node node_modules/expo/bin/cli start` caso o launcher continue falhando. O roteiro abaixo registra a demonstração que foi testada e removida após a aprovação.
+
+1. Pressione cada uma das cinco abas e confira que os traços alternam entre cinza e verde, sem quadrados preenchidos de fundo.
+2. Abra a confirmação e pressione Cancelar: o modal deve fechar e apenas o contador de cancelamentos deve aumentar.
+3. Abra novamente e pressione Confirmar: somente o contador de confirmações deve aumentar.
+4. No Android, abra novamente e use o voltar do sistema: o resultado deve ser cancelamento, com fechamento e um único incremento.
+5. Se disponível, confira o escape do VoiceOver e a nitidez em uma tela de maior densidade.
+
+Cópia original: `.expo/final-review-test/App.js.original`, preservada byte a byte e conferida por SHA-256:
+
+```text
+23e440ce44246cc6a15a4010211a9bdcf3618ec8f6abd3bf5d0c5116d6906e28
+```
+
+**Rodada aprovada por John em 8 de novembro de 2026:** “Tudo correto; pode restaurar App.js”. A aprovação se refere aos ícones e às ações da confirmação no aparelho utilizado; não se presume teste específico com VoiceOver ou em ambas as plataformas.
+
+Após essa confirmação, foi verificado que `App.js` ainda correspondia ao hash da demonstração. Os bytes do backup foram restaurados e a igualdade byte a byte e o SHA-256 original foram conferidos. Os nove componentes e os 15 ícones permaneceram intactos durante a restauração. As alterações anteriores do Git foram preservadas; não houve commit, push, merge ou operação no GitHub/Trello.
+
+Após a restauração, os 21 testes passaram novamente, `App.js` não apresentou diferenças no Git e sua compilação original para Android no Metro retornou HTTP 200.

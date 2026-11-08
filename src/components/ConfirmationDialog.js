@@ -15,17 +15,33 @@ export default function ConfirmationDialog({
     return null;
   }
 
+  if (typeof onCancel !== 'function') {
+    throw new TypeError('ConfirmationDialog requires an onCancel function when visible.');
+  }
+
+  if (typeof onConfirm !== 'function') {
+    throw new TypeError('ConfirmationDialog requires an onConfirm function when visible.');
+  }
+
+  function handleCancel() {
+    onCancel();
+  }
+
+  function handleConfirm() {
+    onConfirm();
+  }
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType='fade'
-      onRequestClose={onCancel}
+      onRequestClose={handleCancel}
     >
       <View style={styles.overlay}>
         <View
           accessibilityViewIsModal
-          onAccessibilityEscape={onCancel}
+          onAccessibilityEscape={handleCancel}
           style={styles.dialog}
         >
           <ScrollView contentContainerStyle={styles.content} bounces={false}>
@@ -35,14 +51,14 @@ export default function ConfirmationDialog({
 
             <View style={styles.actions}>
               <Pressable
-                onPress={onCancel}
+                onPress={handleCancel}
                 accessibilityRole='button'
                 style={({ pressed }) => [styles.cancelButton, pressed && styles.cancelPressed]}
               >
                 <Text style={styles.cancelText}>{cancelLabel}</Text>
               </Pressable>
 
-              <Button title={confirmLabel} onPress={onConfirm} />
+              <Button title={confirmLabel} onPress={handleConfirm} />
             </View>
           </ScrollView>
         </View>

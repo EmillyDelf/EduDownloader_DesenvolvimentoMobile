@@ -5,6 +5,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 const React = require('react');
 const babel = require('@babel/core');
+const { PNG } = require('pngjs');
 
 // Checks component contracts with native elements mocked; Expo Go validates rendering.
 function loadComponent(name) {
@@ -17,7 +18,7 @@ function loadComponent(name) {
     },
   };
   const native = Object.fromEntries([
-    'View', 'Text', 'TextInput', 'Pressable', 'ActivityIndicator', 'Modal', 'ScrollView',
+    'View', 'Text', 'TextInput', 'Pressable', 'ActivityIndicator', 'Modal', 'ScrollView', 'Image',
   ].map(name => [name, name]));
   native.StyleSheet = { create: styles => styles };
   const filename = path.join(__dirname, '../src/components', `${name}.js`);
@@ -33,7 +34,13 @@ function loadComponent(name) {
     require(name) {
       if (name === 'react') return react;
       if (name === 'react-native') return native;
+      if (name === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
       if (name === './Button') return { __esModule: true, default: 'Button' };
+      if (name.startsWith('../../assets/navigation/') && name.endsWith('.png')) {
+        const assetPath = path.resolve(path.dirname(filename), name);
+        assert.equal(fs.existsSync(assetPath), true, `Missing asset: ${name}`);
+        return assetPath;
+      }
       throw new Error(`Unexpected import: ${name}`);
     },
   }, { filename });
@@ -52,6 +59,23 @@ function findAll(node, type) {
 function flattenStyle(style) {
   if (Array.isArray(style)) return Object.assign({}, ...style.map(flattenStyle));
   return style || {};
+}
+
+function assertTransparentIcon(buffer, size) {
+  const image = PNG.sync.read(buffer);
+  assert.equal(image.width, size);
+  assert.equal(image.height, size);
+  let transparentPixels = 0;
+  let visiblePixels = 0;
+  for (let offset = 3; offset < image.data.length; offset += 4) {
+    transparentPixels += image.data[offset] === 0;
+    visiblePixels += image.data[offset] > 0;
+  }
+  assert.ok(transparentPixels > image.width * image.height / 4, 'Icon background must be transparent');
+  assert.ok(visiblePixels > 0, 'Icon must contain a visible drawing');
+  for (const pixel of [0, size - 1, size * (size - 1), size * size - 1]) {
+    assert.equal(image.data[pixel * 4 + 3], 0, 'Icon corners must be transparent');
+  }
 }
 
 test('Button preserves its public props and forwards the disabled state to Pressable', () => {
@@ -253,4 +277,161 @@ test('ConfirmationDialog never invokes actions while rendering or hidden', () =>
   assert.equal(confirmed, 1);
   assert.equal(render({ ...props, visible: false }), null);
   assert.equal(confirmed, 1);
+});
+
+test('BottomNavigation renders the five Figma tabs with local icons', () => {
+  const render = loadComponent('BottomNavigation');
+  const tree = render();
+  assert.deepEqual(
+    findAll(tree, 'Text').map(node => node.props.children),
+    ['Início', 'Downloads', 'PDF', 'Histórico', 'Perfil'],
+  );
+  assert.equal(findAll(tree, 'Pressable').length, 5);
+  const icons = findAll(tree, 'Image');
+  assert.equal(icons.length, 5);
+  assert.equal(new Set(icons.map(icon => icon.props.source)).size, 5);
+  for (const icon of icons) {
+    const png = fs.readFileSync(icon.props.source);
+    assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(png.readUInt32BE(16), 22);
+    assert.equal(png.readUInt32BE(20), 22);
+    assert.equal(flattenStyle(icon.props.style).width, 22);
+    assert.equal(flattenStyle(icon.props.style).height, 22);
+  }
+});
+
+test('BottomNavigation identifies and highlights each controlled selection', () => {
+  const render = loadComponent('BottomNavigation');
+  const identifiers = ['home', 'downloads', 'pdf', 'history', 'profile'];
+  for (const [selectedIndex, activeTab] of identifiers.entries()) {
+    const tabs = findAll(render({ activeTab }), 'Pressable');
+    assert.equal(tabs.filter(tab => tab.props.accessibilityState.selected).length, 1);
+    for (const [index, tab] of tabs.entries()) {
+      const label = flattenStyle(findAll(tab, 'Text')[0].props.style);
+      const icon = findAll(tab, 'Image')[0];
+      assert.equal(tab.props.accessibilityState.selected, index === selectedIndex);
+      assert.equal(label.fontWeight, index === selectedIndex ? '600' : '400');
+      assert.equal(label.color, index === selectedIndex ? '#24AF42' : '#64748B');
+      assert.equal(icon.props.tintColor, label.color);
+    }
+  }
+});
+
+test('BottomNavigation reports stable identifiers without changing selection itself', () => {
+  const render = loadComponent('BottomNavigation');
+  const identifiers = ['home', 'downloads', 'pdf', 'history', 'profile'];
+  const pressed = [];
+  const props = { activeTab: 'home', onTabPress: id => pressed.push(id) };
+  const tabs = findAll(render(props), 'Pressable');
+  assert.equal(pressed.length, 0);
+  for (const tab of tabs) tab.props.onPress();
+  assert.deepEqual(pressed, identifiers);
+  tabs[0].props.onPress();
+  assert.equal(pressed.at(-1), 'home');
+  assert.equal(findAll(render(props), 'Pressable')[0].props.accessibilityState.selected, true);
+});
+
+test('BottomNavigation exposes tab semantics and keeps decorative icons unfocused', () => {
+  const render = loadComponent('BottomNavigation');
+  const tree = render({ activeTab: 'pdf' });
+  assert.equal(findAll(tree, 'View')[0].props.accessibilityRole, 'tablist');
+  for (const tab of findAll(tree, 'Pressable')) {
+    assert.equal(tab.props.accessibilityRole, 'tab');
+    assert.equal(tab.props.accessibilityLabel, findAll(tab, 'Text')[0].props.children);
+    assert.equal(findAll(tab, 'Image')[0].props.accessible, false);
+  }
+  assert.equal(tree.type, 'SafeAreaView');
+  assert.equal(Array.from(tree.props.edges).join(','), 'bottom,left,right');
+});
+
+test('BottomNavigation provides press feedback and equally flexible touch areas', () => {
+  const render = loadComponent('BottomNavigation');
+  for (const tab of findAll(render(), 'Pressable')) {
+    const resting = flattenStyle(tab.props.style({ pressed: false }));
+    const pressing = flattenStyle(tab.props.style({ pressed: true }));
+    assert.notEqual(resting.opacity, pressing.opacity);
+    assert.equal(resting.flex, 1);
+    assert.equal(resting.width, undefined);
+    assert.ok(resting.minHeight >= 48);
+  }
+});
+
+test('BottomNavigation defaults to home and safely handles missing callbacks or unknown tabs', () => {
+  const render = loadComponent('BottomNavigation');
+  assert.equal(findAll(render(), 'Pressable')[0].props.accessibilityState.selected, true);
+  const tabs = findAll(render({ activeTab: 'unknown' }), 'Pressable');
+  assert.equal(tabs.some(tab => tab.props.accessibilityState.selected), false);
+  assert.doesNotThrow(() => tabs[0].props.onPress());
+});
+
+test('Navigation icon pixels have transparent backgrounds at 1x, 2x, and 3x', () => {
+  for (const name of ['home', 'downloads', 'pdf', 'history', 'profile']) {
+    for (const scale of [1, 2, 3]) {
+      const suffix = scale === 1 ? '' : `@${scale}x`;
+      const filename = path.join(__dirname, '../assets/navigation', `${name}${suffix}.png`);
+      assertTransparentIcon(fs.readFileSync(filename), 22 * scale);
+    }
+  }
+});
+
+test('Icon validation rejects fully opaque PNGs even when they have an alpha channel', () => {
+  const opaque = new PNG({ width: 22, height: 22 });
+  opaque.data.fill(255);
+  const flattened = PNG.sync.write(opaque, { colorType: 6 });
+  assert.throws(() => assertTransparentIcon(flattened, 22), /background must be transparent/);
+});
+
+test('ConfirmationDialog requires a valid cancellation callback before opening', () => {
+  const render = loadComponent('ConfirmationDialog');
+  for (const onCancel of [undefined, null, false, 'cancel', {}]) {
+    assert.throws(
+      () => render({ visible: true, onCancel, onConfirm: () => {} }),
+      /requires an onCancel function/,
+    );
+  }
+});
+
+test('ConfirmationDialog requires a valid confirmation callback before opening', () => {
+  const render = loadComponent('ConfirmationDialog');
+  for (const onConfirm of [undefined, null, false, 'confirm', {}]) {
+    assert.throws(
+      () => render({ visible: true, onCancel: () => {}, onConfirm }),
+      /requires an onConfirm function/,
+    );
+  }
+  assert.equal(render(), null);
+  assert.equal(render({ visible: false, onCancel: null, onConfirm: null }), null);
+});
+
+test('ConfirmationDialog routes Android back, escape, and cancel to the same callback without events', () => {
+  const render = loadComponent('ConfirmationDialog');
+  let cancelled = 0;
+  let confirmed = 0;
+  const tree = render({
+    visible: true,
+    onCancel: (...args) => {
+      assert.equal(args.length, 0);
+      cancelled += 1;
+    },
+    onConfirm: (...args) => {
+      assert.equal(args.length, 0);
+      confirmed += 1;
+    },
+  });
+  assert.equal(typeof tree.props.onRequestClose, 'function');
+  assert.equal(cancelled + confirmed, 0);
+  const dialog = findAll(tree, 'View').find(node => node.props.accessibilityViewIsModal);
+  const cancelButton = findAll(tree, 'Pressable')[0];
+  assert.equal(tree.props.onRequestClose, dialog.props.onAccessibilityEscape);
+  assert.equal(tree.props.onRequestClose, cancelButton.props.onPress);
+  tree.props.onRequestClose({ nativeEvent: {} });
+  assert.equal(cancelled, 1);
+  dialog.props.onAccessibilityEscape({ nativeEvent: {} });
+  assert.equal(cancelled, 2);
+  cancelButton.props.onPress({ nativeEvent: {} });
+  assert.equal(cancelled, 3);
+  assert.equal(confirmed, 0);
+  findAll(tree, 'Button')[0].props.onPress({ nativeEvent: {} });
+  assert.equal(confirmed, 1);
+  assert.equal(tree.props.visible, true);
 });
