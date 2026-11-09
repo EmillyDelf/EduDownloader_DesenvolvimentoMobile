@@ -344,23 +344,3 @@ Cópia original: `.expo/final-review-test/App.js.original`, preservada byte a by
 Após essa confirmação, foi verificado que `App.js` ainda correspondia ao hash da demonstração. Os bytes do backup foram restaurados e a igualdade byte a byte e o SHA-256 original foram conferidos. Os nove componentes e os 15 ícones permaneceram intactos durante a restauração. As alterações anteriores do Git foram preservadas; não houve commit, push, merge ou operação no GitHub/Trello.
 
 Após a restauração, os 21 testes passaram novamente, `App.js` não apresentou diferenças no Git e sua compilação original para Android no Metro retornou HTTP 200.
-
-
----
-
-## GOAL 03 — Sistema de Estilos, Padronização Visual e Responsividade (7 Entregas — Paulo)
-
-Implementação completa do sistema de estilos globais (`StyleSheet`), padronização de cores e tipografia do Figma (`Inter` e `Montserrat`), estilos reutilizáveis de componentes e adaptação para diferentes tamanhos de tela em `src/styles/`, integrada aos 9 componentes reutilizáveis em `src/components/`.
-
-### Estrutura Modular Criada em `src/styles/`
-
-| Entrega | Arquivo | Descrição |
-| --- | --- | --- |
-| **1. Estilos Globais** | `src/styles/globalStyles.js` | Containers de tela (`screen`, `safeArea`, `scrollView`, `scrollContent`), layouts dos 3 padrões do Figma (`tabScreenContent`, `flowScreenContent`, `centeredScreenContent`), grids de 2 e 3 colunas (`twoColumnGrid`, `threeColumnGrid`), seções, divisores e sombras. |
-| **2. Estilos de Botões** | `src/styles/buttonStyles.js` e `src/components/Button.js` | Variantes `primary` (`#0F519D`), `secondary` (`#EAF3FF`), `outline` (`+ Adicionar mais imagens`), `cancel` (`Cancelar download/PDF`), `link` (sublinhado), `inline` (`Colar`), `chip` (filtros ativos/inativos), `icon` / `iconBlue` e `success` (`#1E5D3B`), nos tamanhos `sm`, `md` e `lg`. |
-| **3. Estilos de Campos de Texto** | `src/styles/inputStyles.js` e `src/components/Input.js` | Variantes `default` (formulário `58px`), `url` (borda azul translúcida + suporte a `leftIcon` e ação direita `rightActionLabel="Colar"`) e `search` (`52px`, fundo `#F8FAFC`), além de estados de foco, erro e desabilitado. |
-| **4. Estilos de Cabeçalhos e Menus** | `src/styles/headerMenuStyles.js`, `src/components/Header.js` e `src/components/BottomNavigation.js` | Suporte ao Top App Bar de fluxo (`74px`, variante `default` e `subtle` com faixa bicolor `showBrandAccent`), ao Hero Header Banner (`200px`, variante `hero` com `title` e `subtitle` para as 5 abas principais) e aos estilos do `BottomNavigation`. |
-| **5. Estilos de Cartões e Componentes** | `src/styles/cardComponentStyles.js` e `src/components/*` | Variantes de `Card` (`default`, `feature`, `featurePrimary`, `selectable` com `selected`, `download`, `history`, `settings`, `profile`, `dropzone`, `preview`), elementos internos (avatares, badges `"MP4"`/`"PDF"`/`"Concluído"`, radio buttons, miniaturas de página) e estilos de `ProgressBar`, `LoadingIndicator`, `ErrorMessage` e `ConfirmationDialog`. |
-| **6. Cores e Tipografia** | `src/styles/colors.js` e `src/styles/typography.js` | Paleta completa do Figma (`#0F519D`, `#0A4C95`, `#0D355D`, `#2F9CEF`, `#24AF42`, `#1EA540`, superfícies e bordas) e escala tipográfica completa com fontes `Inter` e `Montserrat` carregadas via `expo-font` em `App.js`. |
-| **7. Responsividade Multi-Tela** | `src/styles/responsive.js` | Base calibrada no frame do Figma (`440 × 956`), funções `scale`, `verticalScale`, `moderateScale`, `responsiveFontSize`, `getResponsiveLayout`, `getGridColumnWidth` e hook reativo `useResponsive()` para telas compactas (`< 360px`), regulares (`360–439px`), grandes (`>= 440px`) e tablets (`>= 768px`). |
-| **Exportação Unificada** | `src/styles/index.js` | Ponto central de exportação de todos os módulos e helpers de estilo para consumo nas telas. |
