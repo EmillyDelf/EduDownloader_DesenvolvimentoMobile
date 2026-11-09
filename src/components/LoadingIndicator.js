@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import colors from '../styles/colors';
+import styles from '../styles/cardComponentStyles';
 
 export default function LoadingIndicator({ size = 'large', message = 'Carregando...' }) {
   return (
@@ -8,26 +10,11 @@ export default function LoadingIndicator({ size = 'large', message = 'Carregando
       accessibilityRole='progressbar'
       accessibilityLabel={message || 'Carregando'}
       accessibilityState={{ busy: true }}
-      style={styles.container}
+      style={styles.loadingContainer}
     >
-      <ActivityIndicator size={size} color='#0F519D' accessible={false} />
+      <ActivityIndicator size={size} color={colors.primary} accessible={false} />
 
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      {message ? <Text style={styles.loadingMessage}>{message}</Text> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 12,
-  },
-
-  message: {
-    fontSize: 14,
-    color: '#555555',
-    textAlign: 'center',
-  },
-});
