@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Button from './Button';
-import styles from '../styles/cardComponentStyles';
 
 export default function ErrorMessage({ message, onRetry, retryLabel = 'Tentar novamente' }) {
   if (!message) {
@@ -9,8 +8,8 @@ export default function ErrorMessage({ message, onRetry, retryLabel = 'Tentar no
   }
 
   return (
-    <View style={styles.errorContainer}>
-      <Text accessibilityRole='alert' accessibilityLiveRegion='polite' style={styles.errorMessageText}>
+    <View style={styles.container}>
+      <Text accessibilityRole='alert' accessibilityLiveRegion='polite' style={styles.message}>
         Erro: {message}
       </Text>
 
@@ -18,3 +17,19 @@ export default function ErrorMessage({ message, onRetry, retryLabel = 'Tentar no
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#FECDCA',
+    borderRadius: 12,
+    backgroundColor: '#FEF3F2',
+  },
+
+  message: {
+    fontSize: 14,
+    color: '#B42318',
+  },
+});
