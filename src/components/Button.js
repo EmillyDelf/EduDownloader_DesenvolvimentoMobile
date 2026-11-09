@@ -1,50 +1,106 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Pressable, Text } from 'react-native';
+import { useResponsive } from '../styles/responsive';
+import styles from '../styles/buttonStyles';
 
-export default function Button({ title, onPress, disabled = false }) {
+const VARIANT_CONTAINER_MAP = {
+  primary: styles.primary,
+  success: styles.success,
+  secondary: styles.secondary,
+  outline: styles.outline,
+  cancel: styles.cancel,
+  link: styles.link,
+  inline: styles.inline,
+  chip: styles.chip,
+  icon: styles.icon,
+  iconBlue: styles.iconBlue,
+};
+
+const VARIANT_TEXT_MAP = {
+  primary: styles.primaryText,
+  success: styles.successText,
+  secondary: styles.secondaryText,
+  outline: styles.outlineText,
+  cancel: styles.cancelText,
+  link: styles.linkText,
+  inline: styles.inlineText,
+  chip: styles.chipText,
+};
+
+const SIZE_STYLE_MAP = {
+  sm: styles.sizeSm,
+  md: styles.sizeMd,
+  lg: styles.sizeLg,
+};
+
+export default function Button({
+  title,
+  onPress,
+  disabled = false,
+  variant = 'primary',
+  size = 'md',
+  selected = false,
+  leftIcon,
+  rightIcon,
+  children,
+  accessibilityLabel,
+  style,
+  textStyle,
+}) {
+  const { isSmallScreen } = useResponsive();
+  const variantContainerStyle = VARIANT_CONTAINER_MAP[variant] || styles.primary;
+  const variantTextStyle = VARIANT_TEXT_MAP[variant] || styles.buttonText;
+  const sizeStyle = variant === 'primary' || variant === 'secondary' || variant === 'success'
+    ? SIZE_STYLE_MAP[size]
+    : null;
+  const compactSizeStyle = isSmallScreen
+    ? variant === 'outline'
+      ? styles.outlineCompact
+      : variant === 'cancel'
+        ? styles.cancelCompact
+        : sizeStyle
+          ? size === 'lg'
+            ? styles.sizeLgCompact
+            : size === 'sm'
+              ? styles.sizeSmCompact
+              : styles.sizeMdCompact
+          : null
+    : null;
+
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole='button'
-      accessibilityState={{ disabled }}
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityState={selected ? { disabled, selected } : { disabled }}
       style={({ pressed }) => [
         styles.button,
+        sizeStyle,
+        variantContainerStyle,
+        compactSizeStyle,
+        variant === 'chip' && selected && styles.chipSelected,
         pressed && !disabled && styles.buttonPressed,
         disabled && styles.buttonDisabled,
+        style,
       ]}
     >
-      <Text style={styles.buttonText}>
-        {title}
-      </Text>
+      {leftIcon || null}
+      {title !== undefined && title !== null ? (
+        <Text
+          style={[
+            styles.buttonText,
+            variantTextStyle,
+            variant === 'chip' && selected && styles.chipTextSelected,
+            disabled && styles.buttonTextDisabled,
+            textStyle,
+          ]}
+        >
+          {title}
+        </Text>
+      ) : null}
+      {children || null}
+      {rightIcon || null}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    minHeight: 48,
-    minWidth: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: '#1E5D3B',
-  },
-
-  buttonPressed: {
-    opacity: 0.8,
-  },
-
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-
-  buttonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-});

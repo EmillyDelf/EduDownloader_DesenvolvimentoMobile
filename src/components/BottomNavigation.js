@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import colors from '../styles/colors';
+import styles from '../styles/headerMenuStyles';
 
 const navigationTabs = [
   { id: 'home', label: 'Início', icon: require('../../assets/navigation/home.png') },
@@ -29,7 +31,7 @@ export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
               <Image
                 source={tab.icon}
                 resizeMode='contain'
-                tintColor={isSelected ? '#24AF42' : '#64748B'}
+                tintColor={isSelected ? colors.success : colors.textSecondary}
                 accessible={false}
                 style={styles.icon}
               />
@@ -43,47 +45,3 @@ export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: '#F8FAFC',
-  },
-
-  navigation: {
-    flexDirection: 'row',
-  },
-
-  tab: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 70,
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 18,
-    paddingHorizontal: 2,
-    gap: 7,
-  },
-
-  tabPressed: {
-    opacity: 0.7,
-  },
-
-  icon: {
-    width: 22,
-    height: 22,
-  },
-
-  label: {
-    alignSelf: 'stretch',
-    fontSize: 12,
-    lineHeight: 15,
-    fontWeight: '400',
-    color: '#64748B',
-    textAlign: 'center',
-  },
-
-  labelSelected: {
-    fontWeight: '600',
-    color: '#24AF42',
-  },
-});

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable } from 'react-native';
+import colors from '../styles/colors';
+import styles from '../styles/inputStyles';
 
 export default function Input({
   value,
@@ -11,34 +13,81 @@ export default function Input({
   autoCorrect = true,
   label,
   error,
+  variant = 'default',
+  leftIcon,
+  rightActionLabel,
+  onRightAction,
+  helperText,
+  style,
+  inputStyle,
 }) {
   const [isFocused, setIsFocused] = useState(false);
+  const hasRightAction = Boolean(rightActionLabel && typeof onRightAction === 'function');
+  const hasDecorators = Boolean(leftIcon || hasRightAction);
+
+  const textInputElement = (
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      editable={editable}
+      keyboardType={keyboardType}
+      autoCapitalize={autoCapitalize}
+      autoCorrect={autoCorrect}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      accessibilityLabel={label || placeholder}
+      accessibilityHint={error || helperText || undefined}
+      accessibilityState={{ disabled: !editable }}
+      placeholderTextColor={variant === 'default' ? colors.textSecondary : colors.textPlaceholder}
+      style={[
+        styles.input,
+        variant === 'url' && styles.inputUrl,
+        variant === 'search' && styles.inputSearch,
+        leftIcon && styles.inputWithLeftIcon,
+        hasRightAction && styles.inputWithRightAction,
+        isFocused && editable && styles.inputFocused,
+        error && styles.inputError,
+        !editable && styles.inputDisabled,
+        inputStyle,
+      ]}
+    />
+  );
 
   return (
-    <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+    <View style={[styles.container, style]}>
+      {label ? (
+        <Text style={variant === 'url' ? styles.labelUrl : styles.label}>
+          {label}
+        </Text>
+      ) : null}
 
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        editable={editable}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={autoCorrect}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        accessibilityLabel={label || placeholder}
-        accessibilityHint={error || undefined}
-        accessibilityState={{ disabled: !editable }}
-        placeholderTextColor='#64748B'
-        style={[
-          styles.input,
-          isFocused && editable && styles.inputFocused,
-          error && styles.inputError,
-          !editable && styles.inputDisabled,
-        ]}
-      />
+      {hasDecorators ? (
+        <View style={styles.fieldWrapper}>
+          {leftIcon ? <View style={styles.leftIconSlot}>{leftIcon}</View> : null}
+          {textInputElement}
+          {hasRightAction ? (
+            <Pressable
+              onPress={onRightAction}
+              disabled={!editable}
+              accessibilityRole='button'
+              accessibilityLabel={rightActionLabel}
+              style={({ pressed }) => [
+                styles.rightActionSlot,
+                pressed && editable && styles.rightActionPressed,
+              ]}
+            >
+              <Text style={styles.rightActionText}>{rightActionLabel}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : (
+        textInputElement
+      )}
+
+      {helperText && !error ? (
+        <Text style={styles.helperText}>{helperText}</Text>
+      ) : null}
 
       {error ? (
         <Text accessibilityRole='alert' style={styles.errorText}>
@@ -48,45 +97,3 @@ export default function Input({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    gap: 8,
-  },
-
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-
-  input: {
-    minHeight: 58,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#E5EAF0',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    fontSize: 14,
-    color: '#0D355D',
-  },
-
-  inputFocused: {
-    borderColor: '#0F519D',
-  },
-
-  inputError: {
-    borderColor: '#B42318',
-  },
-
-  inputDisabled: {
-    backgroundColor: '#F5F5F5',
-    color: '#64748B',
-  },
-
-  errorText: {
-    fontSize: 14,
-    color: '#B42318',
-  },
-});

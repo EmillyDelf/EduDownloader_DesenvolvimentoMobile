@@ -39,3 +39,12 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+.agents/
+
+.graphify-out/
+graphify-out/
+.explicação.md
+explicação.md
+prints_entregas/
+

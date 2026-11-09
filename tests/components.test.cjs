@@ -7,8 +7,76 @@ const React = require('react');
 const babel = require('@babel/core');
 const { PNG } = require('pngjs');
 
+let mockWindowDimensions = { width: 440, height: 956, fontScale: 1 };
+
+function createNativeMock(customDimensions) {
+  const dims = customDimensions || mockWindowDimensions;
+  const native = Object.fromEntries([
+    'View', 'Text', 'TextInput', 'Pressable', 'ActivityIndicator', 'Modal', 'ScrollView', 'Image',
+  ].map(name => [name, name]));
+  native.StyleSheet = { create: styles => styles };
+  native.Dimensions = {
+    get: () => dims,
+  };
+  native.PixelRatio = {
+    roundToNearestPixel: val => Math.round(val * 100) / 100,
+  };
+  native.Platform = {
+    OS: 'android',
+    select: obj => (obj && (obj.android ?? obj.default)),
+  };
+  native.useWindowDimensions = () => dims;
+  return native;
+}
+
+function loadModuleFile(filename, reactMock, nativeMock, cache = new Map()) {
+  const resolvedFilename = path.resolve(filename);
+  if (cache.has(resolvedFilename)) {
+    return cache.get(resolvedFilename).exports;
+  }
+
+  const { code } = babel.transformSync(fs.readFileSync(resolvedFilename, 'utf8'), {
+    babelrc: false,
+    configFile: false,
+    plugins: ['@babel/plugin-transform-react-jsx', '@babel/plugin-transform-modules-commonjs'],
+  });
+
+  const module = { exports: {} };
+  cache.set(resolvedFilename, module);
+
+  vm.runInNewContext(code, {
+    module,
+    exports: module.exports,
+    require(reqName) {
+      if (reqName === 'react') return reactMock;
+      if (reqName === 'react-native') return nativeMock;
+      if (reqName === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
+      if (reqName === './Button') return { __esModule: true, default: 'Button' };
+      if (reqName.startsWith('../../assets/navigation/') && reqName.endsWith('.png')) {
+        const assetPath = path.resolve(path.dirname(resolvedFilename), reqName);
+        assert.equal(fs.existsSync(assetPath), true, `Missing asset: ${reqName}`);
+        return assetPath;
+      }
+      if (reqName.startsWith('.')) {
+        let targetPath = path.resolve(path.dirname(resolvedFilename), reqName);
+        if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+          targetPath = path.join(targetPath, 'index.js');
+        } else if (!targetPath.endsWith('.js') && fs.existsSync(`${targetPath}.js`)) {
+          targetPath = `${targetPath}.js`;
+        }
+        if (fs.existsSync(targetPath)) {
+          return loadModuleFile(targetPath, reactMock, nativeMock, cache);
+        }
+      }
+      throw new Error(`Unexpected import: ${reqName}`);
+    },
+  }, { filename: resolvedFilename });
+
+  return module.exports;
+}
+
 // Checks component contracts with native elements mocked; Expo Go validates rendering.
-function loadComponent(name) {
+function loadComponent(name, customDimensions) {
   let state;
   const react = {
     ...React,
@@ -17,34 +85,16 @@ function loadComponent(name) {
       return [state, nextValue => { state = nextValue; }];
     },
   };
-  const native = Object.fromEntries([
-    'View', 'Text', 'TextInput', 'Pressable', 'ActivityIndicator', 'Modal', 'ScrollView', 'Image',
-  ].map(name => [name, name]));
-  native.StyleSheet = { create: styles => styles };
+  const native = createNativeMock(customDimensions);
   const filename = path.join(__dirname, '../src/components', `${name}.js`);
-  const { code } = babel.transformSync(fs.readFileSync(filename, 'utf8'), {
-    babelrc: false,
-    configFile: false,
-    plugins: ['@babel/plugin-transform-react-jsx', '@babel/plugin-transform-modules-commonjs'],
-  });
-  const module = { exports: {} };
-  vm.runInNewContext(code, {
-    module,
-    exports: module.exports,
-    require(name) {
-      if (name === 'react') return react;
-      if (name === 'react-native') return native;
-      if (name === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
-      if (name === './Button') return { __esModule: true, default: 'Button' };
-      if (name.startsWith('../../assets/navigation/') && name.endsWith('.png')) {
-        const assetPath = path.resolve(path.dirname(filename), name);
-        assert.equal(fs.existsSync(assetPath), true, `Missing asset: ${name}`);
-        return assetPath;
-      }
-      throw new Error(`Unexpected import: ${name}`);
-    },
-  }, { filename });
-  return props => module.exports.default(props || {});
+  const mod = loadModuleFile(filename, react, native);
+  return props => mod.default(props || {});
+}
+
+function loadStyleModule(name, customDimensions) {
+  const native = createNativeMock(customDimensions);
+  const filename = path.join(__dirname, '../src/styles', `${name}.js`);
+  return loadModuleFile(filename, React, native);
 }
 
 function findAll(node, type) {
@@ -434,4 +484,233 @@ test('ConfirmationDialog routes Android back, escape, and cancel to the same cal
   findAll(tree, 'Button')[0].props.onPress({ nativeEvent: {} });
   assert.equal(confirmed, 1);
   assert.equal(tree.props.visible, true);
+});
+
+// ============================================================================
+// Testes das 7 Entregas (Estilos Globais, Botões, Inputs, Headers/Menus, Cards,
+// Cores/Tipografia e Responsividade)
+// ============================================================================
+
+test('Entrega 6: colors.js e typography.js padronizam a paleta e tipografia do Figma', () => {
+  const colors = loadStyleModule('colors').default;
+  const typography = loadStyleModule('typography');
+
+  assert.equal(colors.primary, '#0F519D');
+  assert.equal(colors.primaryDark, '#0A4C95');
+  assert.equal(colors.primaryDeep, '#0D355D');
+  assert.equal(colors.secondary, '#2F9CEF');
+  assert.equal(colors.success, '#24AF42');
+  assert.equal(colors.brandGreen, '#1E5D3B');
+  assert.equal(colors.surface, '#F8FAFC');
+  assert.equal(colors.border, '#E5EAF0');
+
+  assert.equal(typography.fontFamilies.regular, 'Inter_400Regular');
+  assert.equal(typography.fontFamilies.semiBold, 'Inter_600SemiBold');
+  assert.equal(typography.fontFamilies.bold, 'Inter_700Bold');
+  assert.equal(typography.fontFamilies.montserratRegular, 'Montserrat_400Regular');
+  assert.equal(typography.textVariants.heroBannerTitle.fontSize, 24);
+  assert.equal(typography.textVariants.headerTitle.fontSize, 18);
+  assert.equal(typography.textVariants.overline.textTransform, 'uppercase');
+  assert.equal(typography.textVariants.fileBadgeText.fontSize, 14);
+  assert.equal(typography.textVariants.fileBadgeText.color, '#0F519D');
+});
+
+test('Entrega 1: globalStyles.js provê containers de tela, fluxos, abas e grids', () => {
+  const {
+    default: globalStyles,
+    spacing,
+    radii,
+    shadows,
+    getAdaptiveContainerStyle,
+    useResponsiveContainerStyles,
+  } = loadStyleModule('globalStyles');
+
+  assert.equal(globalStyles.screen.flex, 1);
+  assert.equal(globalStyles.screen.backgroundColor, '#FFFFFF');
+  assert.equal(globalStyles.tabScreenContent.paddingHorizontal, 50);
+  assert.equal(globalStyles.flowScreenContent.paddingHorizontal, 43);
+  assert.equal(globalStyles.twoColumnGrid.flexDirection, 'row');
+  assert.equal(globalStyles.threeColumnGrid.flexDirection, 'row');
+  assert.equal(spacing.flowHorizontal, 43);
+  assert.equal(spacing.tabHorizontal, 50);
+  assert.equal(radii.md, 10);
+  assert.equal(radii.pillSm, 11);
+  assert.equal(radii.xl, 14);
+  assert.equal(radii.xl2, 20);
+  assert.equal(radii.xl3, 28);
+  assert.equal(shadows.elevated.elevation, 8);
+
+  const compactFlow = getAdaptiveContainerStyle('flow', { width: 320, height: 640 });
+  assert.equal(compactFlow.paddingHorizontal, 16);
+
+  const responsiveStyles = useResponsiveContainerStyles();
+  assert.equal(flattenStyle(responsiveStyles.tabScreenContent).paddingHorizontal, 50);
+  assert.equal(flattenStyle(responsiveStyles.flowScreenContent).paddingHorizontal, 43);
+});
+
+test('Entrega 2: buttonStyles.js e Button.js suportam todas as variantes do Figma', () => {
+  const render = loadComponent('Button');
+
+  const primaryLg = render({ title: 'Continuar', variant: 'primary', size: 'lg' });
+  assert.equal(flattenStyle(primaryLg.props.style({ pressed: false })).backgroundColor, '#0F519D');
+  assert.equal(flattenStyle(primaryLg.props.style({ pressed: false })).minHeight, 56);
+
+  const outline = render({ title: '+ Adicionar mais imagens', variant: 'outline' });
+  assert.equal(flattenStyle(outline.props.style({ pressed: false })).borderColor, '#E5EAF0');
+  assert.equal(flattenStyle(findAll(outline, 'Text')[0].props.style).color, '#0F519D');
+
+  const cancel = render({ title: 'Cancelar download', variant: 'cancel' });
+  assert.equal(flattenStyle(cancel.props.style({ pressed: false })).minHeight, 54);
+  assert.equal(flattenStyle(findAll(cancel, 'Text')[0].props.style).color, '#64748B');
+
+  const chipActive = render({ title: 'Todos', variant: 'chip', selected: true });
+  assert.equal(flattenStyle(chipActive.props.style({ pressed: false })).backgroundColor, '#EAF3FF');
+  assert.equal(flattenStyle(chipActive.props.style({ pressed: false })).borderColor, '#0F519D');
+  assert.equal(chipActive.props.accessibilityState.selected, true);
+
+  const link = render({ title: 'Visualizar PDF', variant: 'link' });
+  assert.equal(flattenStyle(findAll(link, 'Text')[0].props.style).textDecorationLine, 'underline');
+
+  const successLegacy = render({ title: 'Salvar', variant: 'success' });
+  assert.equal(flattenStyle(successLegacy.props.style({ pressed: false })).backgroundColor, '#1E5D3B');
+});
+
+test('Entrega 3: inputStyles.js e Input.js suportam variantes default, url (com ação Colar) e search', () => {
+  const render = loadComponent('Input');
+  let pasted = 0;
+
+  const urlTree = render({
+    label: 'LINK DA MÍDIA',
+    variant: 'url',
+    placeholder: 'https://...',
+    rightActionLabel: 'Colar',
+    onRightAction: () => { pasted += 1; },
+  });
+  const urlInput = findAll(urlTree, 'TextInput')[0];
+  assert.equal(flattenStyle(urlInput.props.style).borderColor, 'rgba(47, 156, 239, 0.38)');
+  const pasteBtn = findAll(urlTree, 'Pressable')[0];
+  assert.equal(findAll(pasteBtn, 'Text')[0].props.children, 'Colar');
+  pasteBtn.props.onPress();
+  assert.equal(pasted, 1);
+
+  const searchTree = render({
+    variant: 'search',
+    placeholder: 'Buscar arquivos',
+  });
+  const searchInput = findAll(searchTree, 'TextInput')[0];
+  assert.equal(flattenStyle(searchInput.props.style).backgroundColor, '#F8FAFC');
+  assert.equal(flattenStyle(searchInput.props.style).minHeight, 52);
+});
+
+test('Entrega 4: headerMenuStyles.js e Header.js suportam Top App Bar (74px), faixa de topo e Hero Banner (200px)', () => {
+  const render = loadComponent('Header');
+
+  const hero = render({
+    variant: 'hero',
+    title: 'Olá!',
+    subtitle: 'Oque deseja fazer hoje?',
+  });
+  assert.equal(flattenStyle(hero.props.style).backgroundColor, '#0F519D');
+  assert.equal(flattenStyle(hero.props.style).minHeight, 200);
+  const heroTexts = findAll(hero, 'Text');
+  assert.equal(heroTexts[0].props.children, 'Olá!');
+  assert.equal(heroTexts[1].props.children, 'Oque deseja fazer hoje?');
+
+  const accented = render({
+    variant: 'subtle',
+    title: 'Baixar mídia por link',
+    showBrandAccent: true,
+  });
+  assert.ok(findAll(accented, 'View').length >= 3);
+  assert.equal(findAll(accented, 'Text')[0].props.children, 'Baixar mídia por link');
+});
+
+test('Entrega 5: cardComponentStyles.js e Card.js suportam cartões de função, seleção, listas e dropzone', () => {
+  const render = loadComponent('Card');
+  const cardStyles = loadStyleModule('cardComponentStyles').default;
+
+  const feature = render({ variant: 'feature' });
+  assert.equal(flattenStyle(feature.props.style).backgroundColor, '#C5E3FB');
+  assert.equal(flattenStyle(feature.props.style).minHeight, 130);
+
+  const selectedOption = render({
+    variant: 'selectable',
+    selected: true,
+    onPress: () => {},
+  });
+  const selectedFlat = flattenStyle(selectedOption.props.style({ pressed: false }));
+  assert.equal(selectedFlat.backgroundColor, '#EAF3FF');
+  assert.equal(selectedFlat.borderColor, '#0F519D');
+  assert.equal(selectedFlat.borderWidth, 2);
+  assert.equal(selectedOption.props.accessibilityState.selected, true);
+
+  const dropzone = render({ variant: 'dropzone' });
+  assert.equal(flattenStyle(dropzone.props.style).borderStyle, 'dashed');
+  assert.equal(flattenStyle(dropzone.props.style).borderColor, '#2F9CEF');
+
+  const formatCard = render({ variant: 'selectableFormat', selected: true });
+  assert.equal(flattenStyle(formatCard.props.style).borderRadius, 14);
+  assert.equal(flattenStyle(formatCard.props.style).borderColor, '#0F519D');
+
+  assert.equal(cardStyles.avatarCircle.width, 72);
+  assert.equal(cardStyles.successHeroCircle.width, 96);
+  assert.equal(cardStyles.statusBadge.backgroundColor, '#EAF8EF');
+  assert.equal(cardStyles.fileBadgeText.fontSize, 14);
+});
+
+test('Entrega 7: responsive.js adapta escalas, breakpoints, paddings e colunas para diferentes tamanhos de tela', () => {
+  const responsive = loadStyleModule('responsive');
+
+  const small = responsive.getResponsiveLayout({ width: 320, height: 568 });
+  assert.equal(small.isSmallScreen, true);
+  assert.equal(small.flowPaddingHorizontal, 16);
+  assert.equal(small.tabPaddingHorizontal, 16);
+
+  const regular = responsive.getResponsiveLayout({ width: 375, height: 812 });
+  assert.equal(regular.isRegularScreen, true);
+  assert.ok(regular.flowPaddingHorizontal >= 20 && regular.flowPaddingHorizontal < 43);
+
+  const figmaBase = responsive.getResponsiveLayout({ width: 440, height: 956 });
+  assert.equal(figmaBase.isLargeScreen, true);
+  assert.equal(figmaBase.flowPaddingHorizontal, 43);
+  assert.equal(figmaBase.tabPaddingHorizontal, 50);
+  assert.equal(figmaBase.availableFlowWidth, 354);
+  assert.equal(figmaBase.availableTabWidth, 340);
+
+  const tablet = responsive.getResponsiveLayout({ width: 768, height: 1024 });
+  assert.equal(tablet.isTablet, true);
+  assert.equal(tablet.contentMaxWidth, 560);
+
+  // Verifica cálculo de colunas do Figma em 440px: 2 colunas com gap 16 = 169px cada (169 + 16 + 169 = 354px)
+  assert.equal(responsive.getGridColumnWidth(2, 16, 43, 440), 169);
+  // 3 colunas em 440px com gap 15 = 108px cada (108 + 15 + 108 + 15 + 108 = 354px)
+  assert.equal(responsive.getGridColumnWidth(3, 15, 43, 440), 108);
+
+  // Verifica adaptação reativa dos componentes em telas compactas (320px) vs. tablet (768px)
+  const renderCompactHeader = loadComponent('Header', { width: 320, height: 568 });
+  const compactHero = renderCompactHeader({ variant: 'hero', title: 'Olá!' });
+  assert.equal(flattenStyle(compactHero.props.style).paddingHorizontal, 16);
+
+  const renderCompactButton = loadComponent('Button', { width: 320, height: 568 });
+  const compactBtn = renderCompactButton({ title: 'Continuar', size: 'lg' });
+  assert.equal(flattenStyle(compactBtn.props.style({ pressed: false })).minHeight, 52);
+  const compactOutline = renderCompactButton({ title: '+ Adicionar', variant: 'outline' });
+  assert.equal(flattenStyle(compactOutline.props.style({ pressed: false })).minHeight, 50);
+  const compactCancel = renderCompactButton({ title: 'Cancelar', variant: 'cancel' });
+  assert.equal(flattenStyle(compactCancel.props.style({ pressed: false })).minHeight, 48);
+
+  const renderCompactCard = loadComponent('Card', { width: 320, height: 568 });
+  const compactPreview = renderCompactCard({ variant: 'preview' });
+  assert.equal(flattenStyle(compactPreview.props.style).padding, 0);
+  const compactDefault = renderCompactCard({ variant: 'default' });
+  assert.equal(flattenStyle(compactDefault.props.style).padding, 12);
+
+  const renderTabletDialog = loadComponent('ConfirmationDialog', { width: 768, height: 1024 });
+  const tabletDialogTree = renderTabletDialog({
+    visible: true,
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+  const modalBox = findAll(tabletDialogTree, 'View').find(node => node.props.accessibilityViewIsModal);
+  assert.equal(flattenStyle(modalBox.props.style).maxWidth, 480);
 });
