@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Button from './Button';
+import colors from './colors';
 
 export default function ErrorMessage({ message, onRetry, retryLabel = 'Tentar novamente' }) {
   if (!message) {
@@ -23,13 +24,13 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#FECDCA',
+    borderColor: colors.blueBorder,
     borderRadius: 12,
-    backgroundColor: '#FEF3F2',
+    backgroundColor: colors.blueSoft,
   },
 
   message: {
     fontSize: 14,
-    color: '#B42318',
+    color: colors.blue,
   },
 });

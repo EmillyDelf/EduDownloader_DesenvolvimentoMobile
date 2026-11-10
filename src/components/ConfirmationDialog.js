@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import Button from './Button';
+import colors from './colors';
 
 export default function ConfirmationDialog({
   visible = false,
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.blueOverlay,
   },
 
   dialog: {
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     maxHeight: '90%',
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     overflow: 'hidden',
   },
 
@@ -93,12 +94,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.blue,
   },
 
   description: {
     fontSize: 16,
-    color: '#555555',
+    color: colors.blue,
   },
 
   actions: {
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E5EAF0',
+    borderColor: colors.blueBorder,
     borderRadius: 8,
   },
 
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#555555',
+    color: colors.blue,
     textAlign: 'center',
   },
 });

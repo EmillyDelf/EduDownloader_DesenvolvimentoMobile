@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
+import colors from './colors';
 
 export default function Card({ children, onPress, disabled = false, accessibilityLabel }) {
   if (!onPress) {
@@ -30,9 +31,9 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#E5EAF0',
+    borderColor: colors.blueBorder,
     borderRadius: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.white,
   },
 
   interactiveCard: {
@@ -41,6 +42,7 @@ const styles = StyleSheet.create({
 
   cardPressed: {
     opacity: 0.8,
+    backgroundColor: colors.blueSoft,
   },
 
   cardDisabled: {

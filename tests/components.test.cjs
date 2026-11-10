@@ -7,6 +7,14 @@ const React = require('react');
 const babel = require('@babel/core');
 const { PNG } = require('pngjs');
 
+const paletteModule = { exports: {} };
+const paletteCode = babel.transformFileSync(path.join(__dirname, '../src/components/colors.js'), {
+  babelrc: false,
+  configFile: false,
+  plugins: ['@babel/plugin-transform-modules-commonjs'],
+}).code;
+vm.runInNewContext(paletteCode, { module: paletteModule, exports: paletteModule.exports });
+
 // Checks component contracts with native elements mocked; Expo Go validates rendering.
 function loadComponent(name) {
   let state;
@@ -36,6 +44,7 @@ function loadComponent(name) {
       if (name === 'react-native') return native;
       if (name === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
       if (name === './Button') return { __esModule: true, default: 'Button' };
+      if (name === './colors') return paletteModule.exports;
       if (name.startsWith('../../assets/navigation/') && name.endsWith('.png')) {
         const assetPath = path.resolve(path.dirname(filename), name);
         assert.equal(fs.existsSync(assetPath), true, `Missing asset: ${name}`);
@@ -311,7 +320,7 @@ test('BottomNavigation identifies and highlights each controlled selection', () 
       const icon = findAll(tab, 'Image')[0];
       assert.equal(tab.props.accessibilityState.selected, index === selectedIndex);
       assert.equal(label.fontWeight, index === selectedIndex ? '600' : '400');
-      assert.equal(label.color, index === selectedIndex ? '#24AF42' : '#64748B');
+      assert.equal(label.color, index === selectedIndex ? '#B9FC01' : '#0131CD');
       assert.equal(icon.props.tintColor, label.color);
     }
   }
@@ -434,4 +443,88 @@ test('ConfirmationDialog routes Android back, escape, and cancel to the same cal
   findAll(tree, 'Button')[0].props.onPress({ nativeEvent: {} });
   assert.equal(confirmed, 1);
   assert.equal(tree.props.visible, true);
+});
+
+test('Component colors are centralized and restricted to the approved palette', () => {
+  const colors = paletteModule.exports.default;
+  assert.equal(colors.blue, '#0131CD');
+  assert.equal(colors.white, '#FFFFFF');
+  assert.equal(colors.lime, '#B9FC01');
+  for (const value of Object.values(colors)) {
+    assert.ok(
+      ['#0131CD', '#FFFFFF', '#B9FC01'].includes(value) || /^rgba\(1, 49, 205, 0\.\d+\)$/.test(value),
+      `Unexpected color: ${value}`,
+    );
+  }
+  for (const name of fs.readdirSync(path.join(__dirname, '../src/components'))) {
+    if (!name.endsWith('.js') || name === 'colors.js') continue;
+    const source = fs.readFileSync(path.join(__dirname, '../src/components', name), 'utf8');
+    assert.equal(/#[\da-f]{3,8}\b|rgba?\(/i.test(source), false, `Color outside colors.js: ${name}`);
+  }
+});
+
+test('The new palette reaches all component surfaces and feedback states', () => {
+  const button = loadComponent('Button')({ title: 'Continuar' });
+  assert.equal(flattenStyle(button.props.style({ pressed: false })).backgroundColor, '#0131CD');
+  assert.equal(flattenStyle(findAll(button, 'Text')[0].props.style).color, '#FFFFFF');
+
+  const input = loadComponent('Input')({ error: 'Link inválido', editable: false });
+  const field = findAll(input, 'TextInput')[0];
+  assert.equal(flattenStyle(field.props.style).borderColor, '#0131CD');
+  assert.equal(flattenStyle(field.props.style).borderWidth, 2);
+  assert.equal(findAll(input, 'Text').some(node => String(node.props.children).includes('Erro:')), true);
+
+  const header = loadComponent('Header')({ title: 'Cabeçalho' });
+  assert.equal(flattenStyle(header.props.style).backgroundColor, '#FFFFFF');
+  assert.equal(flattenStyle(findAll(header, 'Text')[0].props.style).color, '#0131CD');
+
+  const card = loadComponent('Card')();
+  assert.equal(flattenStyle(card.props.style).backgroundColor, '#FFFFFF');
+
+  const loading = loadComponent('LoadingIndicator')();
+  assert.equal(findAll(loading, 'ActivityIndicator')[0].props.color, '#0131CD');
+
+  const progress = loadComponent('ProgressBar')({ progress: 100 });
+  const fill = findAll(progress, 'View').find(node => flattenStyle(node.props.style).width);
+  assert.equal(flattenStyle(fill.props.style).backgroundColor, '#B9FC01');
+  assert.equal(progress.props.accessibilityValue.now, 100);
+
+  const error = loadComponent('ErrorMessage')({ message: 'Falha no download' });
+  assert.equal(flattenStyle(findAll(error, 'Text')[0].props.style).color, '#0131CD');
+  assert.equal(findAll(error, 'Text')[0].props.accessibilityRole, 'alert');
+
+  const dialog = loadComponent('ConfirmationDialog')({
+    visible: true,
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+  const surface = findAll(dialog, 'View').find(node => node.props.accessibilityViewIsModal);
+  assert.equal(flattenStyle(surface.props.style).backgroundColor, '#FFFFFF');
+
+  const tabs = findAll(loadComponent('BottomNavigation')({ activeTab: 'downloads' }), 'Pressable');
+  assert.equal(flattenStyle(tabs[1].props.style({ pressed: false })).backgroundColor, '#0131CD');
+  assert.equal(findAll(tabs[1], 'Image')[0].props.tintColor, '#B9FC01');
+  assert.equal(findAll(tabs[0], 'Image')[0].props.tintColor, '#0131CD');
+});
+
+test('Primary text and selected navigation keep sufficient color contrast', () => {
+  function luminance(hex) {
+    const channels = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16) / 255);
+    const linear = channels.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  }
+  function contrast(first, second) {
+    const values = [luminance(first), luminance(second)].sort((a, b) => b - a);
+    return (values[0] + 0.05) / (values[1] + 0.05);
+  }
+  const button = loadComponent('Button')({ title: 'Continuar' });
+  const background = flattenStyle(button.props.style({ pressed: false })).backgroundColor;
+  const text = flattenStyle(findAll(button, 'Text')[0].props.style).color;
+  assert.ok(contrast(background, text) >= 4.5);
+
+  const selected = findAll(loadComponent('BottomNavigation')(), 'Pressable')[0];
+  const selectedBackground = flattenStyle(selected.props.style({ pressed: false })).backgroundColor;
+  const selectedText = flattenStyle(findAll(selected, 'Text')[0].props.style).color;
+  assert.ok(contrast(selectedBackground, selectedText) >= 4.5);
+  assert.ok(contrast(selectedBackground, findAll(selected, 'Image')[0].props.tintColor) >= 3);
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet } from 'react-native';
+import colors from './colors';
 
 export default function Button({ title, onPress, disabled = false }) {
   return (
@@ -30,7 +31,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    backgroundColor: '#1E5D3B',
+    backgroundColor: colors.blue,
   },
 
   buttonPressed: {
@@ -38,13 +39,13 @@ const styles = StyleSheet.create({
   },
 
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
 
   buttonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
   },
 });

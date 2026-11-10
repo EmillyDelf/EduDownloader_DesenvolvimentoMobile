@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import colors from './colors';
 
 export default function Header({ title, onBack, rightActionLabel, onRightAction }) {
   return (
@@ -42,15 +43,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5EAF0',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: colors.blueBorder,
+    backgroundColor: colors.white,
   },
 
   title: {
     flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.blue,
   },
 
   action: {
@@ -69,7 +70,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E5D3B',
+    color: colors.blue,
     textAlign: 'center',
   },
 });

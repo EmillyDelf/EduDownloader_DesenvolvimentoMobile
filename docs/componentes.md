@@ -344,3 +344,19 @@ Cópia original: `.expo/final-review-test/App.js.original`, preservada byte a by
 Após essa confirmação, foi verificado que `App.js` ainda correspondia ao hash da demonstração. Os bytes do backup foram restaurados e a igualdade byte a byte e o SHA-256 original foram conferidos. Os nove componentes e os 15 ícones permaneceram intactos durante a restauração. As alterações anteriores do Git foram preservadas; não houve commit, push, merge ou operação no GitHub/Trello.
 
 Após a restauração, os 21 testes passaram novamente, `App.js` não apresentou diferenças no Git e sua compilação original para Android no Metro retornou HTTP 200.
+
+## GOAL 04 — Componentes oficiais e nova identidade visual
+
+Por decisão da equipe, a implementação aprovada dos nove componentes de John é a base oficial. Os componentes usam JavaScript, estilos locais com `StyleSheet.create` e a paleta compartilhada em `src/components/colors.js`: azul `#0131CD`, branco `#FFFFFF` e verde-limão `#B9FC01`, com transparências derivadas do azul.
+
+Os nove componentes são `Button`, `Input`, `Header`, `BottomNavigation`, `Card`, `LoadingIndicator`, `ProgressBar`, `ErrorMessage` e `ConfirmationDialog`. Foram preservados os contratos públicos, os callbacks, a acessibilidade, as cinco abas e os 15 ícones transparentes nas resoluções 1x, 2x e 3x. Os componentes não dependem do sistema anterior de `src/styles` nem de fontes adicionais.
+
+A entrada continua sendo `package.json` → `index.js` → `App.js`. Por solicitação de John, `App.js` permanece temporariamente como demonstração integrada: tela rolável, botões normais e desativados, campo editável, cabeçalho, cinco abas, cartões, carregamento, progresso ajustável, erro com nova tentativa e confirmação com ações de confirmar e cancelar. As interações são simulações; não implementam downloads, histórico nem conversão.
+
+Para conferir a demonstração no Expo Go, execute `npx expo start` na raiz do projeto e abra o endereço ou QR code exibido. O cabeçalho esperado é **Componentes**, acompanhado da mensagem **Demonstração integrada: nove componentes, nova paleta.** A demonstração deve permanecer até uma solicitação explícita de substituição ou restauração.
+
+Os 24 testes de contrato, acessibilidade, transparência dos ícones, cancelamento da confirmação, paleta e contraste estão em `tests/components.test.cjs`. Execute `node --test tests/components.test.cjs`. A validação de aparência e interação em dispositivo complementa esses testes, que usam elementos nativos simulados.
+
+Antes da integração, os arquivos locais, os backups anteriores, o índice e o histórico Git foram preservados em uma cópia externa verificada por SHA-256. Nenhum backup, arquivo ZIP, conteúdo de `.expo` ou `node_modules` deve ser incluído no commit.
+
+Validação da integração em 10 de novembro de 2026: os 24 testes passaram. O Metro do projeto principal compilou `index.js` para Android (765 módulos); o bundle foi inspecionado para confirmar os nove componentes e a nova paleta, sem a mensagem da tela antiga. Não se trata de uma nova rodada de teste visual no aparelho. Lint e typecheck não foram concluídos porque ESLint/configuração e TypeScript não estão disponíveis no projeto; não foram instaladas ferramentas adicionais.

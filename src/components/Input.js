@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import colors from './colors';
 
 export default function Input({
   value,
@@ -31,7 +32,7 @@ export default function Input({
         accessibilityLabel={label || placeholder}
         accessibilityHint={error || undefined}
         accessibilityState={{ disabled: !editable }}
-        placeholderTextColor='#64748B'
+        placeholderTextColor={colors.blueMuted}
         style={[
           styles.input,
           isFocused && editable && styles.inputFocused,
@@ -42,7 +43,7 @@ export default function Input({
 
       {error ? (
         <Text accessibilityRole='alert' style={styles.errorText}>
-          {error}
+          Erro: {error}
         </Text>
       ) : null}
     </View>
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: colors.blue,
   },
 
   input: {
@@ -65,28 +66,31 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#E5EAF0',
+    borderColor: colors.blueBorder,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     fontSize: 14,
-    color: '#0D355D',
+    color: colors.blue,
   },
 
   inputFocused: {
-    borderColor: '#0F519D',
+    borderColor: colors.blue,
   },
 
   inputError: {
-    borderColor: '#B42318',
+    borderColor: colors.blue,
+    borderWidth: 2,
+    backgroundColor: colors.blueSoft,
   },
 
   inputDisabled: {
-    backgroundColor: '#F5F5F5',
-    color: '#64748B',
+    backgroundColor: colors.blueSoft,
+    color: colors.blueDisabled,
   },
 
   errorText: {
     fontSize: 14,
-    color: '#B42318',
+    fontWeight: '600',
+    color: colors.blue,
   },
 });

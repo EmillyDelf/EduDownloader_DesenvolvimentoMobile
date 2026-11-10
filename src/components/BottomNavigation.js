@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import colors from './colors';
 
 const navigationTabs = [
   { id: 'home', label: 'Início', icon: require('../../assets/navigation/home.png') },
@@ -24,12 +25,16 @@ export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
               accessibilityRole='tab'
               accessibilityLabel={tab.label}
               accessibilityState={{ selected: isSelected }}
-              style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
+              style={({ pressed }) => [
+                styles.tab,
+                isSelected && styles.tabSelected,
+                pressed && styles.tabPressed,
+              ]}
             >
               <Image
                 source={tab.icon}
                 resizeMode='contain'
-                tintColor={isSelected ? '#24AF42' : '#64748B'}
+                tintColor={isSelected ? colors.lime : colors.blue}
                 accessible={false}
                 style={styles.icon}
               />
@@ -46,7 +51,7 @@ export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.white,
   },
 
   navigation: {
@@ -68,6 +73,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
+  tabSelected: {
+    backgroundColor: colors.blue,
+  },
+
   icon: {
     width: 22,
     height: 22,
@@ -78,12 +87,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 15,
     fontWeight: '400',
-    color: '#64748B',
+    color: colors.blue,
     textAlign: 'center',
   },
 
   labelSelected: {
     fontWeight: '600',
-    color: '#24AF42',
+    color: colors.lime,
   },
 });

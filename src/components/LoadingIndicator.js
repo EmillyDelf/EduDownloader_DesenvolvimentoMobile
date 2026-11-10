@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import colors from './colors';
 
 export default function LoadingIndicator({ size = 'large', message = 'Carregando...' }) {
   return (
@@ -10,7 +11,7 @@ export default function LoadingIndicator({ size = 'large', message = 'Carregando
       accessibilityState={{ busy: true }}
       style={styles.container}
     >
-      <ActivityIndicator size={size} color='#0F519D' accessible={false} />
+      <ActivityIndicator size={size} color={colors.blue} accessible={false} />
 
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
 
   message: {
     fontSize: 14,
-    color: '#555555',
+    color: colors.blue,
     textAlign: 'center',
   },
 });
