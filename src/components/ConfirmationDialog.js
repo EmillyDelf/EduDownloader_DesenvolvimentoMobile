@@ -1,7 +1,9 @@
 import React from 'react';
-import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Button from './Button';
-import colors from './colors';
+import buttonStyles from '../styles/buttons';
+import { feedbackStyles } from '../styles/cards';
+import { useResponsive } from '../styles/responsive';
 
 export default function ConfirmationDialog({
   visible = false,
@@ -12,6 +14,7 @@ export default function ConfirmationDialog({
   confirmLabel = 'Confirmar',
   cancelLabel = 'Cancelar',
 }) {
+  const screen = useResponsive();
   if (!visible) {
     return null;
   }
@@ -39,24 +42,29 @@ export default function ConfirmationDialog({
       animationType='fade'
       onRequestClose={handleCancel}
     >
-      <View style={styles.overlay}>
+      <View style={feedbackStyles.dialogOverlay}>
         <View
           accessibilityViewIsModal
           onAccessibilityEscape={handleCancel}
-          style={styles.dialog}
+          style={[feedbackStyles.dialogSurface, screen.isTablet && { maxWidth: 480 }]}
         >
-          <ScrollView contentContainerStyle={styles.content} bounces={false}>
-            <Text accessibilityRole='header' style={styles.title}>{title}</Text>
+          <ScrollView contentContainerStyle={feedbackStyles.dialogContent} bounces={false}>
+            <Text accessibilityRole='header' style={feedbackStyles.dialogTitle}>{title}</Text>
 
-            {description ? <Text style={styles.description}>{description}</Text> : null}
+            {description ? <Text style={feedbackStyles.dialogDescription}>{description}</Text> : null}
 
-            <View style={styles.actions}>
+            <View style={feedbackStyles.dialogActions}>
               <Pressable
                 onPress={handleCancel}
                 accessibilityRole='button'
-                style={({ pressed }) => [styles.cancelButton, pressed && styles.cancelPressed]}
+                style={({ pressed }) => [
+                  buttonStyles.base,
+                  buttonStyles.secondary,
+                  buttonStyles.fullWidth,
+                  pressed && buttonStyles.pressed,
+                ]}
               >
-                <Text style={styles.cancelText}>{cancelLabel}</Text>
+                <Text style={buttonStyles.secondaryText}>{cancelLabel}</Text>
               </Pressable>
 
               <Button title={confirmLabel} onPress={handleConfirm} />
@@ -67,62 +75,3 @@ export default function ConfirmationDialog({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: colors.blueOverlay,
-  },
-
-  dialog: {
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '90%',
-    borderRadius: 14,
-    backgroundColor: colors.white,
-    overflow: 'hidden',
-  },
-
-  content: {
-    padding: 24,
-    gap: 16,
-  },
-
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.blue,
-  },
-
-  description: {
-    fontSize: 16,
-    color: colors.blue,
-  },
-
-  actions: {
-    gap: 12,
-  },
-
-  cancelButton: {
-    minHeight: 48,
-    justifyContent: 'center',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.blueBorder,
-    borderRadius: 8,
-  },
-
-  cancelPressed: {
-    opacity: 0.7,
-  },
-
-  cancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.blue,
-    textAlign: 'center',
-  },
-});

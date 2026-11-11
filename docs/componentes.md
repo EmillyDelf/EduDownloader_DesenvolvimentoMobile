@@ -347,6 +347,8 @@ Após a restauração, os 21 testes passaram novamente, `App.js` não apresentou
 
 ## GOAL 04 — Componentes oficiais e nova identidade visual
 
+> Registro histórico da integração inicial. A camada compartilhada de estilos, fontes e variantes foi integrada posteriormente na GOAL 05, descrita ao final e em [Estilos e componentes](estilos-componentes.md). A paleta oficial permanece a mesma.
+
 Por decisão da equipe, a implementação aprovada dos nove componentes de John é a base oficial. Os componentes usam JavaScript, estilos locais com `StyleSheet.create` e a paleta compartilhada em `src/components/colors.js`: azul `#0131CD`, branco `#FFFFFF` e verde-limão `#B9FC01`, com transparências derivadas do azul.
 
 Os nove componentes são `Button`, `Input`, `Header`, `BottomNavigation`, `Card`, `LoadingIndicator`, `ProgressBar`, `ErrorMessage` e `ConfirmationDialog`. Foram preservados os contratos públicos, os callbacks, a acessibilidade, as cinco abas e os 15 ícones transparentes nas resoluções 1x, 2x e 3x. Os componentes não dependem do sistema anterior de `src/styles` nem de fontes adicionais.
@@ -360,3 +362,23 @@ Os 24 testes de contrato, acessibilidade, transparência dos ícones, cancelamen
 Antes da integração, os arquivos locais, os backups anteriores, o índice e o histórico Git foram preservados em uma cópia externa verificada por SHA-256. Nenhum backup, arquivo ZIP, conteúdo de `.expo` ou `node_modules` deve ser incluído no commit.
 
 Validação da integração em 10 de novembro de 2026: os 24 testes passaram. O Metro do projeto principal compilou `index.js` para Android (765 módulos); o bundle foi inspecionado para confirmar os nove componentes e a nova paleta, sem a mensagem da tela antiga. Não se trata de uma nova rodada de teste visual no aparelho. Lint e typecheck não foram concluídos porque ESLint/configuração e TypeScript não estão disponíveis no projeto; não foram instaladas ferramentas adicionais.
+
+## GOAL 05 — Integração local dos estilos do Paulo
+
+Em 11 de novembro de 2026, as melhorias da pasta local `EduDownloader_Paulo` foram adaptadas aos nove componentes oficiais. Essa pasta foi utilizada somente como referência; não foram copiados repositório Git, dependências instaladas, configurações do projeto inteiro, assets, backups nem a demonstração do Paulo.
+
+Foram incorporados estilos compartilhados, variantes, tipografia Inter/Montserrat, espaçamentos e helpers responsivos. Os contratos funcionais da GOAL 04 foram preservados: callbacks, estados desativados, campo controlado, cinco abas, progresso limitado a 0–100 e cancelamento do diálogo pelo botão, voltar do Android e escape de acessibilidade.
+
+A fonte única de cores é `src/styles/colors.js`, com azul `#0131CD`, branco `#FFFFFF`, verde-limão `#B9FC01` e transparências derivadas. `src/components/colors.js` reexporta exatamente o mesmo objeto para preservar as importações existentes. Os nomes semânticos da referência do Paulo foram adaptados à identidade oficial; as cores antigas não foram reintroduzidas.
+
+`App.js` mantém a demonstração integrada como primeira tela, com todas as interações originais. Foram acrescentados exemplos de cabeçalho hero, botões secundário/contorno/link, chips, busca, campo com ação e cartões tonais/selecionáveis/tracejados. Não foram criadas rotas definitivas nem operações de download, conversão ou arquivos. A demonstração permanecerá até solicitação explícita de alteração.
+
+Dependências acrescentadas pelo instalador do Expo: `expo-font` (faixa `~58.0.11`, resolvido como `58.0.12`), `@expo-google-fonts/inter@0.4.2` e `@expo-google-fonts/montserrat@0.4.2`. O plugin `expo-font` foi acrescentado em `app.json`. Expo, React, React Native e as demais dependências existentes mantiveram suas versões. As fontes são carregadas por `useFonts` a partir dos arquivos locais dos pacotes, sem exigir Google Fonts pela internet no celular.
+
+Validação local: os 24 testes anteriores foram preservados e adaptados apenas para carregar os módulos compartilhados; 10 testes adicionais cobrem variantes, compatibilidade, responsividade, contraste e a demonstração. Os **34 testes passaram**. O Metro compilou `index.js` para Android (**830 módulos**). O bundle foi inspecionado para confirmar os nove componentes, a paleta e a ausência da tela antiga. Os sete arquivos de fontes foram servidos pelo Metro com bytes idênticos aos instalados. Os 15 ícones continuaram transparentes em 1x/2x/3x.
+
+Lint não pôde executar porque o projeto não possui ESLint/configuração. Typecheck não pôde executar porque TypeScript não está instalado. Não foram adicionadas ferramentas de desenvolvimento apenas para contornar essas limitações.
+
+**Aprovação visual de John em 11 de novembro de 2026:** “Todos passaram; aprovo a integração”, em resposta ao roteiro do Expo Go que incluiu a mensagem de fontes carregadas, rolagem, variantes, estados desativados, campos, cartões, abas, carregamento, progresso, recuperação e confirmar/cancelar/voltar do Android. Essa aprovação se refere ao aparelho utilizado; não se presume teste visual em iOS ou tablet.
+
+As alterações ficaram somente na cópia local da `main`, sem branch nova, staging, commit, push, pull, fetch, merge, rebase ou sincronização. O backup anterior à integração foi salvo fora do projeto e verificado por SHA-256; os assets e os backups anteriores permaneceram intactos. Consulte [Estilos e componentes](estilos-componentes.md) para estrutura, propriedades e variantes.

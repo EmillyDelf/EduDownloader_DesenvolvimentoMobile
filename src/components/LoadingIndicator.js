@@ -1,34 +1,20 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import colors from './colors';
+import { ActivityIndicator, Text, View } from 'react-native';
+import colors from '../styles/colors';
+import { feedbackStyles } from '../styles/cards';
 
-export default function LoadingIndicator({ size = 'large', message = 'Carregando...' }) {
+export default function LoadingIndicator({ size = 'large', message = 'Carregando...', style }) {
   return (
     <View
       accessible
       accessibilityRole='progressbar'
       accessibilityLabel={message || 'Carregando'}
       accessibilityState={{ busy: true }}
-      style={styles.container}
+      style={[feedbackStyles.loadingContainer, style]}
     >
-      <ActivityIndicator size={size} color={colors.blue} accessible={false} />
+      <ActivityIndicator size={size} color={colors.primary} accessible={false} />
 
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      {message ? <Text style={feedbackStyles.loadingMessage}>{message}</Text> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 12,
-  },
-
-  message: {
-    fontSize: 14,
-    color: colors.blue,
-    textAlign: 'center',
-  },
-});

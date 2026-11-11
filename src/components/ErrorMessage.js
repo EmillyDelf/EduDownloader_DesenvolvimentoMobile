@@ -1,16 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
 import Button from './Button';
-import colors from './colors';
+import { feedbackStyles } from '../styles/cards';
 
-export default function ErrorMessage({ message, onRetry, retryLabel = 'Tentar novamente' }) {
+export default function ErrorMessage({
+  message,
+  onRetry,
+  retryLabel = 'Tentar novamente',
+  style,
+}) {
   if (!message) {
     return null;
   }
 
   return (
-    <View style={styles.container}>
-      <Text accessibilityRole='alert' accessibilityLiveRegion='polite' style={styles.message}>
+    <View style={[feedbackStyles.errorContainer, style]}>
+      <Text
+        accessibilityRole='alert'
+        accessibilityLiveRegion='polite'
+        style={feedbackStyles.errorMessage}
+      >
         Erro: {message}
       </Text>
 
@@ -18,19 +27,3 @@ export default function ErrorMessage({ message, onRetry, retryLabel = 'Tentar no
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: colors.blueBorder,
-    borderRadius: 12,
-    backgroundColor: colors.blueSoft,
-  },
-
-  message: {
-    fontSize: 14,
-    color: colors.blue,
-  },
-});

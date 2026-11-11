@@ -10,6 +10,9 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { Montserrat_400Regular, Montserrat_600SemiBold, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import Button from './src/components/Button';
 import Input from './src/components/Input';
 import Header from './src/components/Header';
@@ -20,6 +23,7 @@ import ProgressBar from './src/components/ProgressBar';
 import ErrorMessage from './src/components/ErrorMessage';
 import ConfirmationDialog from './src/components/ConfirmationDialog';
 import colors from './src/components/colors';
+import { buttonStyles, cardStyles, getResponsiveContentStyle, typography, responsive } from './src/styles';
 
 const tabLabels = {
   home: 'Início',
@@ -30,7 +34,20 @@ const tabLabels = {
 };
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Montserrat_400Regular,
+    Montserrat_600SemiBold,
+    Montserrat_700Bold,
+  });
+  const screen = responsive.useResponsive();
   const [activeTab, setActiveTab] = useState('home');
+  const [activeFilter, setActiveFilter] = useState('Todos');
+  const [selectedQuality, setSelectedQuality] = useState('720p');
+  const [searchQuery, setSearchQuery] = useState('');
   const [status, setStatus] = useState('Demonstração integrada: nove componentes, nova paleta.');
   const [link, setLink] = useState('');
   const [inputError, setInputError] = useState('');
@@ -45,13 +62,16 @@ export default function App() {
   const [cancelCount, setCancelCount] = useState(0);
 
   useEffect(() => {
+    if (!fontsLoaded && !fontError) {
+      return;
+    }
     globalThis.__EDU_COMPONENT_DEMO_READY__ = 'nova-paleta-integrada';
     console.info('[EduDownloader] Demonstração integrada montada.');
 
     return () => {
       delete globalThis.__EDU_COMPONENT_DEMO_READY__;
     };
-  }, []);
+  }, [fontsLoaded, fontError]);
 
   function handleButtonPress() {
     setStatus('Botão principal pressionado.');
@@ -90,12 +110,23 @@ export default function App() {
     setStatus(`Aba selecionada: ${tabLabels[tabId]}.`);
   }
 
+  if (!fontsLoaded && !fontError) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.loadingScreen}>
+          <LoadingIndicator message='Carregando Inter e Montserrat...' />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <View testID='componentes-demo-integrada' style={styles.screen}>
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
           <Header
             title='Componentes'
+            showAccentBar
             onBack={() => setStatus('Voltar acionado, sem trocar de tela.')}
             rightActionLabel='Ajuda'
             onRightAction={() => Alert.alert('Teste visual', 'Role para testar os nove componentes. Use as cinco abas no rodapé.')}
@@ -107,18 +138,43 @@ export default function App() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
             <ScrollView
-              contentContainerStyle={styles.content}
+              contentContainerStyle={[styles.content, getResponsiveContentStyle(screen.width)]}
               keyboardShouldPersistTaps='handled'
               keyboardDismissMode='on-drag'
             >
               <Text style={styles.description}>
                 Aba atual: {tabLabels[activeTab]}. Teste apenas simulações, sem downloads ou conversões.
               </Text>
+              <Text accessibilityLiveRegion='polite' style={styles.description}>
+                {fontError ? 'Não foi possível carregar as fontes. Demonstração disponível com fonte alternativa.' : 'Tipografia: Inter e Montserrat carregadas.'}
+              </Text>
+              <Text style={styles.description}>
+                Layout: {screen.isTablet ? 'tablet' : screen.isCompact ? 'compacto' : 'celular'} · {Math.round(screen.width)} px.
+              </Text>
+              <Header variant='hero' title='EduDownloader' subtitle='Componentes oficiais e estilos integrados' />
 
               <View style={styles.section}>
                 <Text accessibilityRole='header' style={styles.heading}>1. Botões</Text>
                 <Button title='Botão azul: testar ação' onPress={handleButtonPress} />
                 <Button title='Botão desativado' onPress={handleButtonPress} disabled />
+                <Button title='Botão secundário' variant='secondary' onPress={() => setStatus('Botão secundário pressionado.')} />
+                <Button title='Botão com contorno' variant='outline' onPress={() => setStatus('Botão com contorno pressionado.')} />
+                <Button title='Botão de link' variant='link' onPress={() => setStatus('Botão de link pressionado.')} />
+                <Button title='Botão compacto' size='sm' fullWidth={false} onPress={() => setStatus('Botão compacto pressionado.')} />
+                <View style={styles.progressOptions}>
+                  {['Todos', 'Vídeos', 'Áudios', 'PDF'].map(filter => (
+                    <Pressable
+                      key={filter}
+                      onPress={() => setActiveFilter(filter)}
+                      accessibilityRole='button'
+                      accessibilityState={{ selected: activeFilter === filter }}
+                      style={({ pressed }) => [buttonStyles.chip, activeFilter === filter && buttonStyles.chipActive, pressed && buttonStyles.pressed]}
+                    >
+                      <Text style={activeFilter === filter ? buttonStyles.chipTextActive : buttonStyles.chipText}>{filter}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.description}>Filtro de teste: {activeFilter}</Text>
                 <Text style={styles.description}>Confira texto branco, pressão e aparência desativada.</Text>
               </View>
 
@@ -136,6 +192,27 @@ export default function App() {
                   error={inputError}
                 />
                 <Text style={styles.description}>Texto digitado: {link || '(vazio)'}</Text>
+                <Input
+                  variant='search'
+                  label='Busca de exemplo'
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder='Buscar conteúdo de exemplo'
+                />
+                <Input
+                  variant='accent'
+                  label='Campo com ação'
+                  value={link}
+                  onChangeText={handleLinkChange}
+                  placeholder='Use a ação Exemplo'
+                  rightActionLabel='Exemplo'
+                  onRightAction={() => handleLinkChange('https://exemplo.com/aula')}
+                  editable={inputEditable}
+                  error={inputError}
+                  keyboardType='url'
+                  autoCapitalize='none'
+                  autoCorrect={false}
+                />
                 <Button
                   title={inputError ? 'Limpar erro do campo' : 'Mostrar erro do campo'}
                   onPress={() => setInputError(inputError ? '' : 'Informe um link válido.')}
@@ -160,6 +237,26 @@ export default function App() {
                 <Card onPress={handleCardPress} disabled accessibilityLabel='Cartão desativado'>
                   <Text style={styles.cardTitle}>Cartão desativado</Text>
                   <Text style={styles.description}>Tocar aqui não deve aumentar o contador.</Text>
+                </Card>
+                <Card variant='soft' onPress={handleCardPress} accessibilityLabel='Cartão tonal'>
+                  <Text style={styles.cardTitle}>Cartão tonal</Text>
+                  <Text style={styles.description}>Mesma ação, com os estilos compartilhados.</Text>
+                </Card>
+                {['720p', '1080p'].map(quality => (
+                  <Card
+                    key={quality}
+                    variant='selectable'
+                    selected={selectedQuality === quality}
+                    onPress={() => setSelectedQuality(quality)}
+                    accessibilityLabel={`Selecionar qualidade ${quality}`}
+                  >
+                    <Text style={cardStyles.title}>{quality}</Text>
+                    <Text style={styles.description}>{selectedQuality === quality ? 'Selecionado' : 'Toque para selecionar'}</Text>
+                  </Card>
+                ))}
+                <Card variant='dashed' onPress={() => setStatus('Cartão tracejado pressionado.')} accessibilityLabel='Área de seleção de exemplo'>
+                  <Text style={styles.cardTitle}>Área de seleção de exemplo</Text>
+                  <Text style={styles.description}>Apenas uma demonstração visual.</Text>
                 </Card>
               </View>
 
@@ -256,7 +353,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
 
+  loadingScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+
   status: {
+    ...typography.caption,
     paddingHorizontal: 20,
     paddingVertical: 12,
     fontSize: 14,
@@ -265,7 +369,7 @@ const styles = StyleSheet.create({
 
   content: {
     width: '100%',
-    maxWidth: 600,
+    maxWidth: 560,
     alignSelf: 'center',
     padding: 20,
     gap: 24,
@@ -276,20 +380,15 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.blue,
+    ...typography.sectionTitle,
   },
 
   description: {
-    fontSize: 14,
-    color: colors.blue,
+    ...typography.body,
   },
 
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.blue,
+    ...typography.cardTitle,
   },
 
   progressOptions: {
@@ -315,7 +414,7 @@ const styles = StyleSheet.create({
   },
 
   progressText: {
-    fontSize: 14,
+    ...typography.caption,
     color: colors.blue,
   },
 

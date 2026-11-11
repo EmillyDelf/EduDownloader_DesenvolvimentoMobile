@@ -1,10 +1,25 @@
 import React from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import colors from './colors';
+import { Pressable, View } from 'react-native';
+import { cardStyles, getCardVariantStyles } from '../styles/cards';
+import { useResponsive } from '../styles/responsive';
 
-export default function Card({ children, onPress, disabled = false, accessibilityLabel }) {
+export default function Card({
+  children,
+  onPress,
+  disabled = false,
+  accessibilityLabel,
+  variant = 'default',
+  selected = false,
+  style,
+}) {
+  const screen = useResponsive();
+  const variantStyles = getCardVariantStyles(variant, selected);
+  const responsiveStyle = variant === 'soft'
+    ? { minHeight: screen.scaleSize(130, { min: 112, max: 142 }) }
+    : null;
+
   if (!onPress) {
-    return <View style={styles.card}>{children}</View>;
+    return <View style={[...variantStyles, responsiveStyle, style]}>{children}</View>;
   }
 
   return (
@@ -13,39 +28,17 @@ export default function Card({ children, onPress, disabled = false, accessibilit
       disabled={disabled}
       accessibilityRole='button'
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, selected }}
       style={({ pressed }) => [
-        styles.card,
-        styles.interactiveCard,
-        pressed && !disabled && styles.cardPressed,
-        disabled && styles.cardDisabled,
+        ...variantStyles,
+        responsiveStyle,
+        cardStyles.interactive,
+        pressed && !disabled && cardStyles.pressed,
+        disabled && cardStyles.disabled,
+        style,
       ]}
     >
       {children}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    padding: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: colors.blueBorder,
-    borderRadius: 14,
-    backgroundColor: colors.white,
-  },
-
-  interactiveCard: {
-    minHeight: 48,
-  },
-
-  cardPressed: {
-    opacity: 0.8,
-    backgroundColor: colors.blueSoft,
-  },
-
-  cardDisabled: {
-    opacity: 0.5,
-  },
-});

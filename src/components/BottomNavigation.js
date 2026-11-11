@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import colors from './colors';
+import colors from '../styles/colors';
+import { bottomNavigationStyles } from '../styles/headers';
+import { useResponsive } from '../styles/responsive';
 
 const navigationTabs = [
   { id: 'home', label: 'Início', icon: require('../../assets/navigation/home.png') },
@@ -12,9 +14,10 @@ const navigationTabs = [
 ];
 
 export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
+  const screen = useResponsive();
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
-      <View accessibilityRole='tablist' style={styles.navigation}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={bottomNavigationStyles.safeArea}>
+      <View accessibilityRole='tablist' style={bottomNavigationStyles.navigation}>
         {navigationTabs.map(tab => {
           const isSelected = activeTab === tab.id;
 
@@ -26,19 +29,25 @@ export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
               accessibilityLabel={tab.label}
               accessibilityState={{ selected: isSelected }}
               style={({ pressed }) => [
-                styles.tab,
-                isSelected && styles.tabSelected,
-                pressed && styles.tabPressed,
+                bottomNavigationStyles.tab,
+                isSelected && bottomNavigationStyles.tabSelected,
+                pressed && bottomNavigationStyles.tabPressed,
               ]}
             >
               <Image
                 source={tab.icon}
                 resizeMode='contain'
-                tintColor={isSelected ? colors.lime : colors.blue}
+                tintColor={isSelected ? colors.success : colors.textSecondary}
                 accessible={false}
-                style={styles.icon}
+                style={bottomNavigationStyles.icon}
               />
-              <Text style={[styles.label, isSelected && styles.labelSelected]}>
+              <Text
+                style={[
+                  bottomNavigationStyles.label,
+                  isSelected && bottomNavigationStyles.labelSelected,
+                  { fontSize: screen.scaleFont(12, { min: 11, max: 14 }) },
+                ]}
+              >
                 {tab.label}
               </Text>
             </Pressable>
@@ -48,51 +57,3 @@ export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.white,
-  },
-
-  navigation: {
-    flexDirection: 'row',
-  },
-
-  tab: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 70,
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 18,
-    paddingHorizontal: 2,
-    gap: 7,
-  },
-
-  tabPressed: {
-    opacity: 0.7,
-  },
-
-  tabSelected: {
-    backgroundColor: colors.blue,
-  },
-
-  icon: {
-    width: 22,
-    height: 22,
-  },
-
-  label: {
-    alignSelf: 'stretch',
-    fontSize: 12,
-    lineHeight: 15,
-    fontWeight: '400',
-    color: colors.blue,
-    textAlign: 'center',
-  },
-
-  labelSelected: {
-    fontWeight: '600',
-    color: colors.lime,
-  },
-});

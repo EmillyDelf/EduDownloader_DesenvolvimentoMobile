@@ -8,7 +8,7 @@ const babel = require('@babel/core');
 const { PNG } = require('pngjs');
 
 const paletteModule = { exports: {} };
-const paletteCode = babel.transformFileSync(path.join(__dirname, '../src/components/colors.js'), {
+const paletteCode = babel.transformFileSync(path.join(__dirname, '../src/styles/colors.js'), {
   babelrc: false,
   configFile: false,
   plugins: ['@babel/plugin-transform-modules-commonjs'],
@@ -16,44 +16,91 @@ const paletteCode = babel.transformFileSync(path.join(__dirname, '../src/compone
 vm.runInNewContext(paletteCode, { module: paletteModule, exports: paletteModule.exports });
 
 // Checks component contracts with native elements mocked; Expo Go validates rendering.
-function loadComponent(name) {
+const compiledModules = new Map();
+
+function createModuleLoader(options = {}, react = React, fontState = [true, null], alerts = []) {
+  const cache = new Map();
+  const native = Object.fromEntries([
+    'View', 'Text', 'TextInput', 'Pressable', 'ActivityIndicator', 'Modal', 'ScrollView',
+    'Image', 'KeyboardAvoidingView',
+  ].map(name => [name, name]));
+  native.StyleSheet = { create: styles => styles };
+  native.Dimensions = { get: () => ({ width: options.width ?? 440, height: options.height ?? 956 }) };
+  native.PixelRatio = {
+    getFontScale: () => options.fontScale ?? 1,
+    roundToNearestPixel: value => Math.round(value),
+  };
+  native.useWindowDimensions = () => ({
+    ...native.Dimensions.get(),
+    fontScale: options.fontScale ?? 1,
+  });
+  native.Platform = { OS: 'android' };
+  native.Alert = { alert: (...args) => alerts.push(args) };
+
+  function load(filename) {
+    const resolved = path.resolve(filename);
+    if (resolved === path.resolve(__dirname, '../src/styles/colors.js')) return paletteModule.exports;
+    if (cache.has(resolved)) return cache.get(resolved).exports;
+    const module = { exports: {} };
+    cache.set(resolved, module);
+    if (!compiledModules.has(resolved)) {
+      compiledModules.set(resolved, babel.transformFileSync(resolved, {
+        babelrc: false,
+        configFile: false,
+        plugins: ['@babel/plugin-transform-react-jsx', '@babel/plugin-transform-modules-commonjs'],
+      }).code);
+    }
+    vm.runInNewContext(compiledModules.get(resolved), {
+      module,
+      exports: module.exports,
+      console,
+      require(request) {
+        if (request === 'react') return react;
+        if (request === 'react-native') return native;
+        if (request === 'react-native-safe-area-context') {
+          return { SafeAreaView: 'SafeAreaView', SafeAreaProvider: 'SafeAreaProvider' };
+        }
+        if (request === 'expo-font') return { useFonts: () => fontState };
+        if (request.startsWith('@expo-google-fonts/')) {
+          return Object.fromEntries([
+            'Inter_400Regular', 'Inter_500Medium', 'Inter_600SemiBold', 'Inter_700Bold',
+            'Montserrat_400Regular', 'Montserrat_600SemiBold', 'Montserrat_700Bold',
+          ].map((name, index) => [name, index + 1]));
+        }
+        if (request === './Button') return { __esModule: true, default: 'Button' };
+        if (request.startsWith('.')) {
+          let target = path.resolve(path.dirname(resolved), request);
+          if (target.endsWith('.png')) {
+            assert.equal(fs.existsSync(target), true, 'Missing asset: ' + request);
+            return target;
+          }
+          if (fs.existsSync(target) && fs.statSync(target).isDirectory()) target = path.join(target, 'index.js');
+          else if (!target.endsWith('.js')) target += '.js';
+          return load(target);
+        }
+        throw new Error('Unexpected import: ' + request);
+      },
+    }, { filename: resolved });
+    return module.exports;
+  }
+  return load;
+}
+
+function loadComponent(name, options = {}) {
   let state;
   const react = {
     ...React,
     useState(initialValue) {
       if (state === undefined) state = initialValue;
-      return [state, nextValue => { state = nextValue; }];
+      return [state, next => { state = typeof next === 'function' ? next(state) : next; }];
     },
   };
-  const native = Object.fromEntries([
-    'View', 'Text', 'TextInput', 'Pressable', 'ActivityIndicator', 'Modal', 'ScrollView', 'Image',
-  ].map(name => [name, name]));
-  native.StyleSheet = { create: styles => styles };
-  const filename = path.join(__dirname, '../src/components', `${name}.js`);
-  const { code } = babel.transformSync(fs.readFileSync(filename, 'utf8'), {
-    babelrc: false,
-    configFile: false,
-    plugins: ['@babel/plugin-transform-react-jsx', '@babel/plugin-transform-modules-commonjs'],
-  });
-  const module = { exports: {} };
-  vm.runInNewContext(code, {
-    module,
-    exports: module.exports,
-    require(name) {
-      if (name === 'react') return react;
-      if (name === 'react-native') return native;
-      if (name === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
-      if (name === './Button') return { __esModule: true, default: 'Button' };
-      if (name === './colors') return paletteModule.exports;
-      if (name.startsWith('../../assets/navigation/') && name.endsWith('.png')) {
-        const assetPath = path.resolve(path.dirname(filename), name);
-        assert.equal(fs.existsSync(assetPath), true, `Missing asset: ${name}`);
-        return assetPath;
-      }
-      throw new Error(`Unexpected import: ${name}`);
-    },
-  }, { filename });
-  return props => module.exports.default(props || {});
+  const component = createModuleLoader(options, react)(path.join(__dirname, '../src/components', name + '.js')).default;
+  return props => component(props || {});
+}
+
+function loadStyleModule(name, options = {}) {
+  return createModuleLoader(options)(path.join(__dirname, '../src/styles', name + '.js'));
 }
 
 function findAll(node, type) {
@@ -452,7 +499,7 @@ test('Component colors are centralized and restricted to the approved palette', 
   assert.equal(colors.lime, '#B9FC01');
   for (const value of Object.values(colors)) {
     assert.ok(
-      ['#0131CD', '#FFFFFF', '#B9FC01'].includes(value) || /^rgba\(1, 49, 205, 0\.\d+\)$/.test(value),
+      ['#0131CD', '#FFFFFF', '#B9FC01', 'transparent'].includes(value) || /^rgba\((?:1, 49, 205|185, 252, 1), 0\.\d+\)$/.test(value),
       `Unexpected color: ${value}`,
     );
   }
@@ -527,4 +574,262 @@ test('Primary text and selected navigation keep sufficient color contrast', () =
   const selectedText = flattenStyle(findAll(selected, 'Text')[0].props.style).color;
   assert.ok(contrast(selectedBackground, selectedText) >= 4.5);
   assert.ok(contrast(selectedBackground, findAll(selected, 'Image')[0].props.tintColor) >= 3);
+});
+
+test('Legacy color imports share the canonical tokens and styles contain no independent palette', () => {
+  const load = createModuleLoader();
+  const canonical = load(path.join(__dirname, '../src/styles/colors.js')).default;
+  const legacy = load(path.join(__dirname, '../src/components/colors.js')).default;
+  const barrel = load(path.join(__dirname, '../src/styles/index.js'));
+  assert.equal(legacy, canonical);
+  assert.equal(barrel.colors, canonical);
+  assert.equal(canonical.primary, '#0131CD');
+  assert.equal(canonical.success, '#B9FC01');
+  for (const name of fs.readdirSync(path.join(__dirname, '../src/styles'))) {
+    if (name === 'colors.js') continue;
+    const source = fs.readFileSync(path.join(__dirname, '../src/styles', name), 'utf8');
+    assert.equal(/#[\da-f]{3,8}\b|rgba?\(/i.test(source), false, 'Color outside canonical tokens: ' + name);
+  }
+  assert.ok(barrel.buttonStyles && barrel.inputStyles && barrel.headerStyles && barrel.cardStyles);
+  assert.ok(barrel.responsive && barrel.typography && barrel.globalStyles && barrel.feedbackStyles);
+});
+
+test('Typography keeps Inter body text, Montserrat headings, and native system font scaling', () => {
+  const { default: typography, fontFamilies } = loadStyleModule('typography');
+  assert.equal(typography.body.fontFamily, 'Inter_400Regular');
+  assert.equal(typography.headerTitle.fontFamily, 'Montserrat_600SemiBold');
+  assert.equal(typography.sectionTitle.fontFamily, 'Montserrat_600SemiBold');
+  assert.equal(fontFamilies.brandRegular, 'Montserrat_400Regular');
+  assert.equal(fontFamilies.brandBold, 'Montserrat_700Bold');
+  const ordinary = loadStyleModule('responsive', { fontScale: 1 });
+  const enlarged = loadStyleModule('responsive', { fontScale: 2 });
+  assert.equal(enlarged.getFontScale(), 2);
+  assert.equal(enlarged.scaleFont(16), ordinary.scaleFont(16), 'Native Text handles system scaling once');
+  for (const name of fs.readdirSync(path.join(__dirname, '../src/components'))) {
+    const source = fs.readFileSync(path.join(__dirname, '../src/components', name), 'utf8');
+    assert.equal(/allowFontScaling=\{false\}/.test(source), false);
+  }
+});
+
+test('Responsive helpers and content containers adapt to compact phones and tablets', () => {
+  for (const [width, height, padding, tablet] of [[320, 568, 16, false], [390, 844, 20, false], [440, 956, 24, false], [800, 1280, 24, true]]) {
+    const helpers = loadStyleModule('responsive', { width, height });
+    const metrics = helpers.getScreenMetrics();
+    const layout = loadStyleModule('globalStyles', { width, height });
+    assert.equal(metrics.horizontalPadding, padding);
+    assert.equal(metrics.isTablet, tablet);
+    assert.equal(metrics.isCompact, width === 320);
+    assert.equal(layout.getResponsiveContentStyle(width).paddingHorizontal, padding);
+    assert.ok(helpers.scaleSize(56) >= 48 && helpers.scaleSize(56) <= 64);
+  }
+  const layout = loadStyleModule('globalStyles');
+  assert.equal(layout.getResponsiveContentStyle(440, 'flow').paddingHorizontal, 43);
+  assert.equal(layout.getResponsiveContentStyle(440, 'main').paddingHorizontal, 50);
+  assert.equal(layout.getResponsiveContentStyle(800).maxWidth, 560);
+});
+
+test('Button variants retain callbacks, icons, overrides, disabled feedback, and usable touch sizes', () => {
+  const render = loadComponent('Button');
+  const colors = paletteModule.exports.default;
+  const sizes = loadStyleModule('spacing').sizes;
+  let presses = 0;
+  for (const variant of ['primary', 'secondary', 'outline', 'link', 'unknown']) {
+    const tree = render({ title: 'Testar', variant, onPress: () => { presses += 1; } });
+    const style = flattenStyle(tree.props.style({ pressed: false }));
+    assert.ok(style.minHeight >= sizes.minTouchTarget);
+    assert.equal(findAll(tree, 'Text')[0].props.children, 'Testar');
+    tree.props.onPress();
+    const disabled = render({ title: 'Testar', variant, disabled: true });
+    assert.equal(disabled.props.disabled, true);
+    assert.deepEqual(disabled.props.style({ pressed: true }), disabled.props.style({ pressed: false }));
+  }
+  assert.equal(presses, 5);
+  const icon = React.createElement('Image', { source: 'test-icon' });
+  const compact = render({ title: 'Compacto', size: 'sm', fullWidth: false, leftIcon: icon, style: { marginTop: 7 }, textStyle: { letterSpacing: 1 } });
+  assert.equal(findAll(compact, 'Image').length, 1);
+  assert.equal(flattenStyle(compact.props.style({ pressed: false })).marginTop, 7);
+  assert.equal(flattenStyle(compact.props.style({ pressed: false })).minHeight, 48);
+  assert.equal(flattenStyle(findAll(compact, 'Text')[0].props.style).letterSpacing, 1);
+  const styles = loadStyleModule('buttons').default;
+  assert.ok(styles.chip.minHeight >= 48);
+  assert.equal(styles.chipActive.backgroundColor, colors.blue);
+  assert.equal(styles.chipTextActive.color, colors.lime);
+});
+
+test('Input addons support focus, error and disabled states without losing controlled input behavior', () => {
+  const render = loadComponent('Input');
+  let actions = 0;
+  let value = '';
+  const props = { variant: 'accent', value, onChangeText: text => { value = text; }, rightActionLabel: 'Exemplo', onRightAction: () => { actions += 1; } };
+  const initial = render(props);
+  const field = findAll(initial, 'TextInput')[0];
+  field.props.onChangeText('https://exemplo.com/aula');
+  assert.equal(value, 'https://exemplo.com/aula');
+  field.props.onFocus();
+  const focused = render(props);
+  assert.ok(findAll(focused, 'View').some(node => flattenStyle(node.props.style).borderColor === '#0131CD'));
+  const action = findAll(focused, 'Pressable')[0];
+  assert.equal(action.props.disabled, false);
+  action.props.onPress();
+  assert.equal(actions, 1);
+  const disabled = render({ ...props, editable: false, error: 'Link inválido' });
+  assert.equal(findAll(disabled, 'TextInput')[0].props.editable, false);
+  assert.equal(findAll(disabled, 'Pressable')[0].props.accessibilityState.disabled, true);
+  assert.ok(findAll(disabled, 'View').some(node => flattenStyle(node.props.style).borderWidth === 2));
+  assert.ok(findAll(disabled, 'Text').some(node => node.props.accessibilityRole === 'alert'));
+  const missingCallback = render({ rightActionLabel: 'Exemplo' });
+  assert.equal(findAll(missingCallback, 'Pressable')[0].props.disabled, true);
+  const search = render({ variant: 'search', placeholder: 'Buscar' });
+  assert.ok(flattenStyle(findAll(search, 'TextInput')[0].props.style).minHeight >= 48);
+});
+
+test('Hero header and compact accent preserve actions, labels, and update on window resize', () => {
+  const options = { width: 320, height: 568 };
+  const render = loadComponent('Header', options);
+  let back = 0;
+  const props = { variant: 'hero', title: 'Olá!', subtitle: 'Componentes', onBack: () => { back += 1; } };
+  const compact = render(props);
+  assert.equal(flattenStyle(compact.props.style).paddingHorizontal, 16);
+  findAll(compact, 'Pressable')[0].props.onPress();
+  assert.equal(back, 1);
+  options.width = 800;
+  options.height = 1280;
+  const wide = render(props);
+  assert.equal(flattenStyle(wide.props.style).paddingHorizontal, 50);
+  assert.ok(flattenStyle(wide.props.style).minHeight > flattenStyle(compact.props.style).minHeight);
+  assert.ok(findAll(wide, 'Text').some(node => node.props.children === 'Componentes'));
+  const accented = render({ title: 'Cabeçalho', showAccentBar: true });
+  assert.ok(findAll(accented, 'View').some(node => flattenStyle(node.props.style).backgroundColor === '#B9FC01'));
+});
+
+test('Card variants keep passive content, selectable semantics, feedback, and live responsive sizes', () => {
+  const options = { width: 320, height: 568 };
+  const render = loadComponent('Card', options);
+  const compact = render({ variant: 'soft' });
+  options.width = 800;
+  const wide = render({ variant: 'soft' });
+  assert.ok(flattenStyle(wide.props.style).minHeight > flattenStyle(compact.props.style).minHeight);
+  for (const variant of ['default', 'soft', 'selectable', 'formatOption', 'summary', 'dashed', 'listAlt', 'historyItem', 'profileHighlight', 'infoBanner', 'mediaPreview']) {
+    const passive = render({ variant, children: 'Conteúdo' });
+    assert.equal(passive.type, 'View');
+    assert.equal(passive.props.children, 'Conteúdo');
+  }
+  const selected = render({ variant: 'selectable', selected: true, onPress: () => {}, accessibilityLabel: 'Qualidade' });
+  assert.equal(selected.props.accessibilityState.selected, true);
+  assert.equal(selected.props.accessibilityLabel, 'Qualidade');
+  assert.equal(flattenStyle(selected.props.style({ pressed: false })).borderWidth, 2);
+  const dashed = render({ variant: 'dashed' });
+  assert.equal(flattenStyle(dashed.props.style).borderStyle, 'dashed');
+  const dialog = loadComponent('ConfirmationDialog', { width: 800, height: 1280 })({ visible: true, onConfirm: () => {}, onCancel: () => {} });
+  const surface = findAll(dialog, 'View').find(node => node.props.accessibilityViewIsModal);
+  assert.equal(flattenStyle(surface.props.style).maxWidth, 480);
+});
+
+function contrastRatio(foreground, background, opacity = 1) {
+  function rgb(value) {
+    if (value.startsWith('#')) return [1, 3, 5].map(offset => parseInt(value.slice(offset, offset + 2), 16)).concat(1);
+    if (value === 'transparent') return [0, 0, 0, 0];
+    return value.match(/[\d.]+/g).map(Number);
+  }
+  function blend(front, back) {
+    return front.slice(0, 3).map((channel, index) => channel * front[3] + back[index] * (1 - front[3]));
+  }
+  function luminance(channels) {
+    const linear = channels.map(channel => channel / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  }
+  const surface = blend(rgb(background), [255, 255, 255]);
+  const text = blend(rgb(foreground), surface);
+  const backgroundLuminance = luminance(blend([...surface, opacity], [255, 255, 255]));
+  const textLuminance = luminance(blend([...text, opacity], [255, 255, 255]));
+  return (Math.max(backgroundLuminance, textLuminance) + 0.05) / (Math.min(backgroundLuminance, textLuminance) + 0.05);
+}
+
+test('Enabled variants, pressed states, placeholders and lime highlights retain readable contrast', () => {
+  const render = loadComponent('Button');
+  for (const variant of ['primary', 'secondary', 'outline', 'link']) {
+    const tree = render({ title: 'Texto', variant });
+    const text = flattenStyle(findAll(tree, 'Text')[0].props.style).color;
+    for (const pressed of [false, true]) {
+      const style = flattenStyle(tree.props.style({ pressed }));
+      assert.ok(contrastRatio(text, style.backgroundColor, style.opacity ?? 1) >= 4.5, variant + ' contrast');
+    }
+  }
+  const colors = paletteModule.exports.default;
+  const headers = loadStyleModule('headers');
+  const buttons = loadStyleModule('buttons').default;
+  assert.ok(contrastRatio(colors.lime, colors.blue, headers.bottomNavigationStyles.tabPressed.opacity) >= 4.5);
+  assert.ok(contrastRatio(colors.lime, colors.blue, buttons.pressed.opacity) >= 4.5);
+  assert.ok(contrastRatio(colors.textPlaceholder, colors.surfaceSoft) >= 4.5);
+  assert.ok(contrastRatio(colors.blue, colors.surfaceSuccess) >= 4.5);
+  assert.ok(contrastRatio(colors.blue, colors.errorSoft) >= 4.5);
+  assert.ok(contrastRatio(colors.border, colors.white) >= 3);
+  assert.ok(contrastRatio(colors.borderAccent, colors.surfaceSoft) >= 3);
+});
+
+function loadApp(fontState = [true, null]) {
+  const states = [];
+  const alerts = [];
+  let index = 0;
+  const react = {
+    ...React,
+    useEffect() {},
+    useState(initial) {
+      const current = index++;
+      if (!(current in states)) states[current] = initial;
+      return [states[current], next => { states[current] = typeof next === 'function' ? next(states[current]) : next; }];
+    },
+  };
+  const App = createModuleLoader({}, react, fontState, alerts)(path.join(__dirname, '../App.js')).default;
+  return { alerts, render() { index = 0; return App(); } };
+}
+
+test('Integrated App keeps nine components, scroll, all original interactions and the official palette', () => {
+  const app = loadApp();
+  const components = tree => findAll(tree, 'View').find(node => node.props.testID === 'componentes-demo-integrada');
+  const instances = (tree, name) => {
+    if (Array.isArray(tree)) return tree.flatMap(node => instances(node, name));
+    if (!tree || typeof tree !== 'object') return [];
+    return [...(typeof tree.type === 'function' && tree.type.name === name ? [tree] : []), ...instances(tree.props.children, name)];
+  };
+  const button = (title, tree = app.render()) => instances(tree, 'Button').find(node => node.props.title === title);
+  const first = app.render();
+  assert.ok(components(first));
+  assert.equal(findAll(first, 'ScrollView').length, 1);
+  for (const name of ['Button', 'Input', 'Header', 'BottomNavigation', 'Card', 'LoadingIndicator', 'ProgressBar', 'ErrorMessage', 'ConfirmationDialog']) {
+    assert.ok(instances(first, name).length, 'Missing demo component: ' + name);
+  }
+  assert.equal(button('Botão desativado', first).props.disabled, true);
+  button('Botão azul: testar ação', first).props.onPress();
+  assert.equal(app.alerts.length, 1);
+  instances(first, 'Input')[0].props.onChangeText('https://exemplo.com');
+  assert.equal(instances(app.render(), 'Input')[0].props.value, 'https://exemplo.com');
+  button('Desativar edição').props.onPress();
+  assert.equal(instances(app.render(), 'Input')[0].props.editable, false);
+  instances(app.render(), 'BottomNavigation')[0].props.onTabPress('pdf');
+  assert.equal(instances(app.render(), 'BottomNavigation')[0].props.activeTab, 'pdf');
+  const progressButton = findAll(app.render(), 'Pressable').find(node => node.props.accessibilityLabel === 'Definir progresso em 75%');
+  progressButton.props.onPress();
+  assert.equal(instances(app.render(), 'ProgressBar')[0].props.progress, 75);
+  instances(app.render(), 'ErrorMessage')[0].props.onRetry();
+  assert.equal(instances(app.render(), 'ErrorMessage')[0].props.message, '');
+  button('Abrir confirmação').props.onPress();
+  assert.equal(instances(app.render(), 'ConfirmationDialog')[0].props.visible, true);
+  instances(app.render(), 'ConfirmationDialog')[0].props.onCancel();
+  assert.equal(instances(app.render(), 'ConfirmationDialog')[0].props.visible, false);
+  button('Abrir confirmação').props.onPress();
+  instances(app.render(), 'ConfirmationDialog')[0].props.onConfirm();
+  assert.equal(instances(app.render(), 'ConfirmationDialog')[0].props.visible, false);
+  const source = fs.readFileSync(path.join(__dirname, '../App.js'), 'utf8');
+  assert.equal(source.includes('Aplicativo iniciado com sucesso!'), false);
+  assert.equal(source.includes('Demonstração integrada: nove componentes, nova paleta.'), true);
+});
+
+test('Font loading waits explicitly and an error keeps the demonstration available', () => {
+  const pending = loadApp([false, null]).render();
+  assert.equal(findAll(pending, 'ScrollView').length, 0);
+  const failed = loadApp([false, new Error('Falha de fonte')]).render();
+  assert.equal(findAll(failed, 'ScrollView').length, 1);
+  const text = findAll(failed, 'Text').map(node => node.props.children).join(' ');
+  assert.ok(text.includes('Demonstração disponível com fonte alternativa'));
 });

@@ -1,76 +1,104 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import colors from './colors';
+import { Image, Pressable, Text, View } from 'react-native';
+import { headerStyles } from '../styles/headers';
+import { useResponsive } from '../styles/responsive';
 
-export default function Header({ title, onBack, rightActionLabel, onRightAction }) {
+function renderHeaderAction(label, onPress, onDark = false) {
   return (
-    <View style={styles.header}>
-      {onBack ? (
-        <Pressable
-          onPress={onBack}
-          accessibilityRole='button'
-          accessibilityLabel='Voltar'
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-        >
-          <Text style={styles.actionText}>Voltar</Text>
-        </Pressable>
-      ) : null}
-
-      <Text accessibilityRole='header' style={styles.title}>
-        {title}
+    <Pressable
+      onPress={onPress}
+      accessibilityRole='button'
+      accessibilityLabel={label}
+      style={({ pressed }) => [headerStyles.action, pressed && headerStyles.actionPressed]}
+    >
+      <Text style={[headerStyles.actionText, onDark && headerStyles.actionTextOnDark]}>
+        {label}
       </Text>
-
-      {rightActionLabel && onRightAction ? (
-        <Pressable
-          onPress={onRightAction}
-          accessibilityRole='button'
-          accessibilityLabel={rightActionLabel}
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-        >
-          <Text style={styles.actionText}>{rightActionLabel}</Text>
-        </Pressable>
-      ) : null}
-    </View>
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    minHeight: 74,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.blueBorder,
-    backgroundColor: colors.white,
-  },
+function renderLogo(logo) {
+  if (!logo) return null;
+  if (React.isValidElement(logo)) return logo;
+  return (
+    <Image
+      source={logo}
+      resizeMode='contain'
+      accessible={false}
+      style={headerStyles.logo}
+    />
+  );
+}
 
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.blue,
-  },
+export default function Header({
+  title,
+  onBack,
+  rightActionLabel,
+  onRightAction,
+  variant = 'compact',
+  subtitle,
+  logo = null,
+  showAccentBar = false,
+  contentStyle,
+  style,
+}) {
+  const screen = useResponsive();
+  if (variant === 'hero') {
+    const hasTopControls = Boolean(onBack || (rightActionLabel && onRightAction) || logo);
+    return (
+      <View style={[
+        headerStyles.hero,
+        { paddingHorizontal: screen.heroHorizontalPadding, minHeight: screen.scaleSize(200, { min: 168, max: 210 }) },
+        style,
+      ]}>
+        {hasTopControls ? (
+          <View style={headerStyles.heroTopRow}>
+            {onBack ? renderHeaderAction('Voltar', onBack, true) : <View />}
+            {rightActionLabel && onRightAction
+              ? renderHeaderAction(rightActionLabel, onRightAction, true)
+              : renderLogo(logo)}
+          </View>
+        ) : null}
 
-  action: {
-    minHeight: 48,
-    minWidth: 48,
-    maxWidth: '30%',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
+        <View style={[headerStyles.heroContent, contentStyle]}>
+          <Text accessibilityRole='header' style={headerStyles.heroTitle}>
+            {title}
+          </Text>
+          {subtitle ? <Text style={headerStyles.heroSubtitle}>{subtitle}</Text> : null}
+        </View>
+      </View>
+    );
+  }
 
-  actionPressed: {
-    opacity: 0.7,
-  },
+  const content = (
+    <>
+      {onBack ? renderHeaderAction('Voltar', onBack) : null}
 
-  actionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.blue,
-    textAlign: 'center',
-  },
-});
+      <Text
+        accessibilityRole='header'
+        style={showAccentBar ? headerStyles.titleAccent : headerStyles.title}
+      >
+        {title}
+      </Text>
+
+      {rightActionLabel && onRightAction
+        ? renderHeaderAction(rightActionLabel, onRightAction)
+        : renderLogo(logo)}
+    </>
+  );
+
+  if (showAccentBar) {
+    return (
+      <View style={[headerStyles.accentWrapper, style]}>
+        <View style={headerStyles.accentBar}>
+          <View style={headerStyles.accentBarPrimary} />
+          <View style={headerStyles.accentBarSuccess} />
+        </View>
+        <View style={headerStyles.compactRow}>{content}</View>
+      </View>
+    );
+  }
+
+  return <View style={[headerStyles.compact, style]}>{content}</View>;
+}
