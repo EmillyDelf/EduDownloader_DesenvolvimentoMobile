@@ -60,6 +60,7 @@ function createModuleLoader(options = {}, react = React, fontState = [true, null
         if (request === 'react-native-safe-area-context') {
           return { SafeAreaView: 'SafeAreaView', SafeAreaProvider: 'SafeAreaProvider' };
         }
+        if (request === 'expo-status-bar') return { StatusBar: 'StatusBar' };
         if (request === 'expo-font') return { useFonts: () => fontState };
         if (request.startsWith('@expo-google-fonts/')) {
           return Object.fromEntries([
@@ -780,11 +781,11 @@ function loadApp(fontState = [true, null]) {
       return [states[current], next => { states[current] = typeof next === 'function' ? next(states[current]) : next; }];
     },
   };
-  const App = createModuleLoader({}, react, fontState, alerts)(path.join(__dirname, '../App.js')).default;
+  const App = createModuleLoader({}, react, fontState, alerts)(path.join(__dirname, '../src/dev/ComponentsPreview.js')).default;
   return { alerts, render() { index = 0; return App(); } };
 }
 
-test('Integrated App keeps nine components, scroll, all original interactions and the official palette', () => {
+test('Relocated component demonstration keeps nine components, scroll, all original interactions and the official palette', () => {
   const app = loadApp();
   const components = tree => findAll(tree, 'View').find(node => node.props.testID === 'componentes-demo-integrada');
   const instances = (tree, name) => {
@@ -820,7 +821,7 @@ test('Integrated App keeps nine components, scroll, all original interactions an
   button('Abrir confirmação').props.onPress();
   instances(app.render(), 'ConfirmationDialog')[0].props.onConfirm();
   assert.equal(instances(app.render(), 'ConfirmationDialog')[0].props.visible, false);
-  const source = fs.readFileSync(path.join(__dirname, '../App.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '../src/dev/ComponentsPreview.js'), 'utf8');
   assert.equal(source.includes('Aplicativo iniciado com sucesso!'), false);
   assert.equal(source.includes('Demonstração integrada: nove componentes, nova paleta.'), true);
 });

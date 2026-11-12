@@ -3,7 +3,7 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { headerStyles } from '../styles/headers';
 import { useResponsive } from '../styles/responsive';
 
-function renderHeaderAction(label, onPress, onDark = false) {
+function renderHeaderAction(label, onPress, onDark = false, icon = null) {
   return (
     <Pressable
       onPress={onPress}
@@ -11,9 +11,13 @@ function renderHeaderAction(label, onPress, onDark = false) {
       accessibilityLabel={label}
       style={({ pressed }) => [headerStyles.action, pressed && headerStyles.actionPressed]}
     >
-      <Text style={[headerStyles.actionText, onDark && headerStyles.actionTextOnDark]}>
-        {label}
-      </Text>
+      {icon ? (
+        <Image source={icon} resizeMode='contain' accessible={false} style={{ width: 20, height: 20, alignSelf: 'center' }} />
+      ) : (
+        <Text style={[headerStyles.actionText, onDark && headerStyles.actionTextOnDark]}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
@@ -34,6 +38,7 @@ function renderLogo(logo) {
 export default function Header({
   title,
   onBack,
+  backIcon = null,
   rightActionLabel,
   onRightAction,
   variant = 'compact',
@@ -73,7 +78,7 @@ export default function Header({
 
   const content = (
     <>
-      {onBack ? renderHeaderAction('Voltar', onBack) : null}
+      {onBack ? renderHeaderAction('Voltar', onBack, false, backIcon) : null}
 
       <Text
         accessibilityRole='header'
