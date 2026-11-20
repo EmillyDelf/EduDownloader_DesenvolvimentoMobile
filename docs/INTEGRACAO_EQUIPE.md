@@ -4,6 +4,8 @@
 
 # Integração EduDownloader Mobile — John + Paulo
 
+> **Integração da equipe em 19/11/2026.** Este documento registra a etapa anterior. O fluxo completo de PDF e a escolha de qualidade de áudio estão no [relatório da integração atual](RELATORIO_INTEGRACAO_EQUIPE.md).
+
 Entrega local para Emilly em **12/11/2026**. A integração das interfaces está concluída e passou nos testes de contratos e na geração do bundle Android. A validação visual em Expo Go/dispositivo continua pendente; esta entrega não representa aprovação integral em um aparelho.
 
 ## Telas e autoria

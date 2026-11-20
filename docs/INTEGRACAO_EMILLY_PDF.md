@@ -1,5 +1,7 @@
 # Integração das interfaces da Emilly — EduDownloader Mobile
 
+> **Integração da equipe em 19/11/2026.** A etapa descrita abaixo é histórica. A versão atual também gera, abre, exporta e compartilha PDFs. Consulte o [relatório da integração](RELATORIO_INTEGRACAO_EQUIPE.md).
+
 Entrega local em **12/11/2026** no projeto `EduDownloader_DesenvolvimentoMobile`. A pasta `EduDownloader_Emilly_20261112` foi utilizada somente como referência. O projeto EduDownloader Desktop não foi acessado nem modificado.
 
 ## Ponto de partida preservado

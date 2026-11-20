@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { Alert, BackHandler, ScrollView, Text, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { BackHandler, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,8 +8,12 @@ import HomeScreen from '../screens/HomeScreen';
 import DownloadsScreen from '../screens/DownloadsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import ConvertGalleryVideoScreen from '../screens/ConvertGalleryVideoScreen';
+import FormatChoiceScreen from '../screens/FormatChoiceScreen';
 import SelectImagesScreen from '../screens/SelectImagesScreen';
 import OrganizeImagesScreen from '../screens/OrganizeImagesScreen';
+import PdfSettingsScreen from '../screens/PdfSettingsScreen';
+import PdfProgressScreen from '../screens/PdfProgressScreen';
+import PdfCompleteScreen from '../screens/PdfCompleteScreen';
 import ComponentsPreview from '../dev/ComponentsPreview';
 import DownloadsHistoryPreview from '../dev/DownloadsHistoryPreview';
 import BottomNavigation from '../components/BottomNavigation';
@@ -21,6 +25,7 @@ import { normalizeSelectedImages } from '../pdf/imageSelection';
 const Stack = createNativeStackNavigator();
 const tabs = ['home', 'downloads', 'pdf', 'history', 'profile'];
 const contentEdges = ['top', 'left', 'right'];
+const defaultPdfSettings = { name: 'Meu documento', pageSize: 'A4', orientation: 'portrait', margin: 10 };
 
 export function PendingScreen({ title, onBack }) {
   const screen = responsive.useResponsive();
@@ -45,10 +50,15 @@ export function MainTabs({ navigation, downloadProps = {}, historyProps = {} }) 
   const [visited, setVisited] = useState({ home: true });
   const [pdfStep, setPdfStep] = useState('select');
   const [pdfImages, setPdfImages] = useState([]);
+  const [pdfSettings, setPdfSettings] = useState(defaultPdfSettings);
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const [pdfError, setPdfError] = useState('');
+  const [pdfResult, setPdfResult] = useState(null);
+  const generatingPdf = useRef(false);
 
   function selectTab(tab) {
     if (!tabs.includes(tab)) return;
-    if (tab === 'pdf') setPdfStep('select');
+    if (tab === 'pdf' && activeTab !== 'pdf' && pdfStep === 'organize') setPdfStep('select');
     setVisited(current => ({ ...current, [tab]: true }));
     setActiveTab(tab);
   }
@@ -57,9 +67,14 @@ export function MainTabs({ navigation, downloadProps = {}, historyProps = {} }) 
   // Conversion and previews keep the native stack's normal Android back action.
   useFocusEffect(useCallback(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (activeTab === 'pdf' && pdfStep === 'organize') {
-        setPdfStep('select');
-        return true;
+      if (activeTab === 'pdf') {
+        if (generatingPdf.current) return true;
+        const previous = { organize: 'select', settings: 'organize', progress: 'settings' }[pdfStep];
+        if (previous) {
+          setPdfStep(previous);
+          return true;
+        }
+        if (pdfStep === 'complete') setPdfStep('select');
       }
       if (activeTab === 'home') return false;
       setActiveTab('home');
@@ -79,16 +94,65 @@ export function MainTabs({ navigation, downloadProps = {}, historyProps = {} }) 
     setPdfStep('organize');
   }
 
-  function finishPdfInterface() {
-    Alert.alert('Geração de PDF em desenvolvimento', 'A seleção e a organização estão prontas. A geração de um arquivo PDF será implementada futuramente. Nenhum arquivo foi criado.');
+  function openPdfSettings(images) {
+    const selected = normalizeSelectedImages(images);
+    if (!selected.length) return;
+    setPdfImages(selected);
+    setPdfStep('settings');
+  }
+
+  async function generateConfiguredPdf(settings = pdfSettings) {
+    if (generatingPdf.current || !pdfImages.length) return;
+    generatingPdf.current = true;
+    setPdfSettings(settings);
+    setPdfError('');
+    setPdfResult(null);
+    setPdfProgress(0);
+    setPdfStep('progress');
+    try {
+      const { generatePdf } = require('../pdf/pdfGenerator');
+      const result = await generatePdf({
+        images: pdfImages,
+        settings,
+        onProgress: ({ progress }) => setPdfProgress(progress),
+      });
+      setPdfResult(result);
+      setPdfStep('complete');
+    } catch {
+      setPdfError('Não foi possível criar o PDF. Confira as imagens e o espaço disponível e tente novamente.');
+    } finally {
+      generatingPdf.current = false;
+    }
+  }
+
+  function startNewPdf() {
+    setPdfImages([]);
+    setPdfSettings(defaultPdfSettings);
+    setPdfResult(null);
+    setPdfError('');
+    setPdfProgress(0);
+    openPdfSelection();
+  }
+
+  function renderPdfStep() {
+    switch (pdfStep) {
+      case 'organize':
+        return <OrganizeImagesScreen images={pdfImages} onImagesChange={updatePdfImages} onBack={openPdfSelection} onAddImages={openPdfSelection} onContinue={openPdfSettings} />;
+      case 'settings':
+        return <PdfSettingsScreen images={pdfImages} initialSettings={pdfSettings} onBack={() => setPdfStep('organize')} onGenerate={generateConfiguredPdf} />;
+      case 'progress':
+        return <PdfProgressScreen progress={pdfProgress} error={pdfError} onRetry={() => generateConfiguredPdf()} onBack={() => setPdfStep('settings')} />;
+      case 'complete':
+        return <PdfCompleteScreen result={pdfResult} onBack={() => { openPdfSelection(); home(); }} onNewPdf={startNewPdf} />;
+      default:
+        return <SelectImagesScreen initialImages={pdfImages} onImagesChange={updatePdfImages} onBack={home} onContinue={openPdfOrganization} />;
+    }
   }
   const screens = {
     home: <HomeScreen navigation={navigation} onTabPress={selectTab} />,
     downloads: <DownloadsScreen {...downloads} onBack={home} onTabPress={undefined} safeAreaEdges={contentEdges} />,
     history: <HistoryScreen {...history} onBack={home} onTabPress={undefined} safeAreaEdges={contentEdges} />,
-    pdf: pdfStep === 'select'
-      ? <SelectImagesScreen initialImages={pdfImages} onImagesChange={updatePdfImages} onBack={home} onContinue={openPdfOrganization} />
-      : <OrganizeImagesScreen images={pdfImages} onImagesChange={updatePdfImages} onBack={openPdfSelection} onAddImages={openPdfSelection} onContinue={finishPdfInterface} />,
+    pdf: renderPdfStep(),
     profile: <PendingScreen title='Perfil' onBack={home} />,
   };
 
@@ -123,6 +187,7 @@ export default function AppNavigator({ downloadProps, historyProps }) {
           {props => <MainTabs {...props} downloadProps={downloadProps} historyProps={historyProps} />}
         </Stack.Screen>
         <Stack.Screen name='ConvertGalleryVideo' component={ConvertGalleryVideoScreen} />
+        <Stack.Screen name='FormatChoice' component={FormatChoiceScreen} />
         <Stack.Screen name='ComponentsPreview' component={ComponentsPreview} />
         <Stack.Screen name='FilesPreview' component={FilesPreviewRoute} />
       </Stack.Navigator>
