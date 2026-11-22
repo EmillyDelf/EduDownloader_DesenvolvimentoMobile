@@ -27,10 +27,9 @@ test('Integrated entry waits for fonts, loads Inter and Montserrat, and exposes 
   assert.ok(textContent(failed).includes('fonte alternativa'));
 });
 
-// Adapted from Paulo's route-registration test: retain both routes and extend
-// the entry to the four-screen integration and the preserved demonstrations.
-test('Native stack registers the main entry, both media routes, format choice and previews without duplicating a bottom menu', () => {
-  const app = harness(navigationFile, { mockScreens: true });
+test('Native stack registers the converter, format choice, previews and the real download flow without a duplicate bottom menu', () => {
+  const downloadFlow = { status: 'paused', onResume() {} };
+  const app = harness(navigationFile, { mockScreens: true, mediaLibraryProps: { downloadFlow } });
   const tree = app.render({ downloadProps: { isLoading: true } });
   assert.equal(findAll(tree, 'NavigationContainer').length, 1);
   assert.equal(findAll(tree, 'Stack.Navigator')[0].props.initialRouteName, 'Main');
@@ -49,6 +48,7 @@ test('Native stack registers the main entry, both media routes, format choice an
   assert.equal(backs, 1);
   const download = screens[5].props.component({ navigation: { goBack: () => { backs += 1; } } });
   assert.equal(download.type, 'MediaDownloadForm');
+  assert.equal(download.props.flow, downloadFlow);
   download.props.onExit();
   assert.equal(backs, 2);
   assert.equal(findAll(tree, 'BottomNavigation').length, 0);
@@ -97,6 +97,7 @@ test('Downloads and History receive original records and callbacks, safe-area ed
     assert.equal(child.props.items, items);
     assert.equal(child.props.onOpenItem, onOpenItem);
     assert.equal(child.props.onRetry, onRetry);
+    assert.equal(child.props.showBack, false);
     assert.equal(child.props.onTabPress, undefined);
     assert.equal(Array.from(child.props.safeAreaEdges).join(','), 'top,left,right');
     child.props.onBack();

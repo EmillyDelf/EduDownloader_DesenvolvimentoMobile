@@ -211,13 +211,19 @@ test('PDF completion receives the real generator result once and retries only it
   const result = { uri: 'file:///app/documents/PDFs/aula.pdf', name: 'aula.pdf', size: 1100, pageCount: 2 };
   let generated = 0;
   const calls = [];
+  const steps = [];
   const app = harness('src/navigation/AppNavigator.js', {
     mockScreens: true,
-    mediaLibraryProps: { downloadProps: {}, historyProps: {}, async onRegisterGeneratedFile(input) {
-      calls.push(input);
-      return calls.length > 1;
-    } },
-    moduleMocks: { '../pdf/pdfGenerator': { async generatePdf() { generated++; return result; } } },
+    mediaLibraryProps: {
+      downloadProps: {}, historyProps: {},
+      async onPrepareFiles() { steps.push('prepare'); },
+      async onRegisterGeneratedFile(input) {
+        steps.push('register');
+        calls.push(input);
+        return calls.length > 1;
+      },
+    },
+    moduleMocks: { '../pdf/pdfGenerator': { async generatePdf() { steps.push('generate'); generated++; return result; } } },
   });
   const screen = name => findAll(app.render({}, 'MainTabs'), name)[0]?.props;
   screen('BottomNavigation').onTabPress('pdf');
@@ -235,6 +241,7 @@ test('PDF completion receives the real generator result once and retries only it
   assert.equal(calls.length, 2);
   assert.equal(generated, 1);
   assert.equal(screen('PdfCompleteScreen').libraryError, '');
+  assert.deepEqual(steps, ['prepare', 'generate', 'register', 'register']);
 });
 
 test('Completion opens, exports without overwriting and shares the same PDF, with cancellation and missing-file handling', async () => {
