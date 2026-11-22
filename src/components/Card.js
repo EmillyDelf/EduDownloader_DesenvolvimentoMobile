@@ -8,6 +8,7 @@ export default function Card({
   onPress,
   disabled = false,
   accessibilityLabel,
+  accessibilityRole = 'button',
   variant = 'default',
   selected = false,
   style,
@@ -26,9 +27,9 @@ export default function Card({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole='button'
+      accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled, selected }}
+      accessibilityState={accessibilityRole === 'radio' ? { disabled, checked: selected } : { disabled, selected }}
       style={({ pressed }) => [
         ...variantStyles,
         responsiveStyle,

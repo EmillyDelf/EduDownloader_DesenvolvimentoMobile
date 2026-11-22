@@ -1,0 +1,697 @@
+[
+  {
+    "name": "antes-downloads-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 50,
+        "y": 105,
+        "width": 340,
+        "height": 32
+      },
+      "search": {
+        "x": 95,
+        "y": 643,
+        "width": 278,
+        "height": 50
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 886,
+        "width": 440,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "antes-history-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 50,
+        "y": 105,
+        "width": 340,
+        "height": 32
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 886,
+        "width": 440,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "antes-link-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 0,
+        "y": 0,
+        "width": 440,
+        "height": 32
+      }
+    }
+  },
+  {
+    "name": "antes-format-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 0,
+        "y": 0,
+        "width": 440,
+        "height": 32
+      }
+    }
+  },
+  {
+    "name": "antes-progress-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 0,
+        "y": 0,
+        "width": 440,
+        "height": 32
+      }
+    }
+  },
+  {
+    "name": "antes-complete-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 0,
+        "y": 0,
+        "width": 440,
+        "height": 32
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 50,
+        "y": 106,
+        "width": 340,
+        "height": 32
+      },
+      "search": {
+        "x": 95,
+        "y": 225,
+        "width": 278,
+        "height": 50
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 886,
+        "width": 440,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-history-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 50,
+        "y": 106,
+        "width": 340,
+        "height": 32
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 886,
+        "width": 440,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-link-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 68,
+        "y": 24.5,
+        "width": 301,
+        "height": 24
+      },
+      "stage": {
+        "x": 43,
+        "y": 128,
+        "width": 354,
+        "height": 472
+      }
+    }
+  },
+  {
+    "name": "depois-format-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 56,
+        "y": 24.5,
+        "width": 374,
+        "height": 24
+      },
+      "stage": {
+        "x": 43,
+        "y": 106,
+        "width": 354,
+        "height": 545
+      }
+    }
+  },
+  {
+    "name": "depois-quality-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 56,
+        "y": 24.5,
+        "width": 313,
+        "height": 24
+      },
+      "stage": {
+        "x": 43,
+        "y": 106,
+        "width": 354,
+        "height": 402
+      }
+    }
+  },
+  {
+    "name": "depois-progress-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 147.296875,
+        "y": 501,
+        "width": 145.390625,
+        "height": 28
+      },
+      "stage": {
+        "x": 43,
+        "y": 353,
+        "width": 354,
+        "height": 308
+      }
+    }
+  },
+  {
+    "name": "depois-complete-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 97.90625,
+        "y": 346,
+        "width": 244.171875,
+        "height": 32
+      },
+      "stage": {
+        "x": 43,
+        "y": 224,
+        "width": 354,
+        "height": 450
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 16,
+        "y": 81,
+        "width": 288,
+        "height": 27
+      },
+      "search": {
+        "x": 61,
+        "y": 193,
+        "width": 226,
+        "height": 46
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 670,
+        "width": 320,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-history-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 16,
+        "y": 81,
+        "width": 288,
+        "height": 27
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 670,
+        "width": 320,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-link-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 68,
+        "y": 26,
+        "width": 181,
+        "height": 21
+      },
+      "stage": {
+        "x": 16,
+        "y": 128,
+        "width": 288,
+        "height": 497
+      }
+    }
+  },
+  {
+    "name": "depois-format-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 56,
+        "y": 26,
+        "width": 254,
+        "height": 21
+      },
+      "stage": {
+        "x": 16,
+        "y": 106,
+        "width": 288,
+        "height": 560
+      }
+    }
+  },
+  {
+    "name": "depois-quality-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 56,
+        "y": 26,
+        "width": 193,
+        "height": 21
+      },
+      "stage": {
+        "x": 16,
+        "y": 106,
+        "width": 288,
+        "height": 402
+      }
+    }
+  },
+  {
+    "name": "depois-progress-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 94.5625,
+        "y": 396,
+        "width": 130.859375,
+        "height": 24
+      },
+      "stage": {
+        "x": 16,
+        "y": 248,
+        "width": 288,
+        "height": 302
+      }
+    }
+  },
+  {
+    "name": "depois-complete-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 58.265625,
+        "y": 296.5,
+        "width": 203.46875,
+        "height": 27
+      },
+      "stage": {
+        "x": 16,
+        "y": 174.5,
+        "width": 288,
+        "height": 453
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-800",
+    "width": 800,
+    "scrollWidth": 800,
+    "positions": {
+      "heading": {
+        "x": 144,
+        "y": 111,
+        "width": 512,
+        "height": 35
+      },
+      "search": {
+        "x": 189,
+        "y": 235,
+        "width": 450,
+        "height": 54
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 929,
+        "width": 800,
+        "height": 71
+      }
+    }
+  },
+  {
+    "name": "depois-history-800",
+    "width": 800,
+    "scrollWidth": 800,
+    "positions": {
+      "heading": {
+        "x": 144,
+        "y": 111,
+        "width": 512,
+        "height": 35
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 929,
+        "width": 800,
+        "height": 71
+      }
+    }
+  },
+  {
+    "name": "depois-link-800",
+    "width": 800,
+    "scrollWidth": 800,
+    "positions": {
+      "heading": {
+        "x": 68,
+        "y": 23.5,
+        "width": 661,
+        "height": 26
+      },
+      "stage": {
+        "x": 144,
+        "y": 128,
+        "width": 512,
+        "height": 483
+      }
+    }
+  },
+  {
+    "name": "depois-format-800",
+    "width": 800,
+    "scrollWidth": 800,
+    "positions": {
+      "heading": {
+        "x": 56,
+        "y": 23.5,
+        "width": 734,
+        "height": 26
+      },
+      "stage": {
+        "x": 144,
+        "y": 106,
+        "width": 512,
+        "height": 553
+      }
+    }
+  },
+  {
+    "name": "depois-quality-800",
+    "width": 800,
+    "scrollWidth": 800,
+    "positions": {
+      "heading": {
+        "x": 56,
+        "y": 23.5,
+        "width": 673,
+        "height": 26
+      },
+      "stage": {
+        "x": 144,
+        "y": 106,
+        "width": 512,
+        "height": 404
+      }
+    }
+  },
+  {
+    "name": "depois-progress-800",
+    "width": 800,
+    "scrollWidth": 800,
+    "positions": {
+      "heading": {
+        "x": 320.03125,
+        "y": 520.5,
+        "width": 159.9375,
+        "height": 31
+      },
+      "stage": {
+        "x": 144,
+        "y": 372.5,
+        "width": 512,
+        "height": 313
+      }
+    }
+  },
+  {
+    "name": "depois-complete-800",
+    "width": 800,
+    "scrollWidth": 800,
+    "positions": {
+      "heading": {
+        "x": 267.734375,
+        "y": 363.5,
+        "width": 264.515625,
+        "height": 35
+      },
+      "stage": {
+        "x": 144,
+        "y": 241.5,
+        "width": 512,
+        "height": 459
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-empty-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 50,
+        "y": 106,
+        "width": 340,
+        "height": 32
+      },
+      "search": {
+        "x": 95,
+        "y": 225,
+        "width": 278,
+        "height": 50
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 886,
+        "width": 440,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-loading-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 50,
+        "y": 106,
+        "width": 340,
+        "height": 32
+      },
+      "search": {
+        "x": 95,
+        "y": 225,
+        "width": 278,
+        "height": 50
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 886,
+        "width": 440,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-error-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 50,
+        "y": 106,
+        "width": 340,
+        "height": 32
+      },
+      "search": {
+        "x": 95,
+        "y": 225,
+        "width": 278,
+        "height": 50
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 886,
+        "width": 440,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-unknown-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 147.296875,
+        "y": 502,
+        "width": 145.390625,
+        "height": 28
+      },
+      "stage": {
+        "x": 43,
+        "y": 354,
+        "width": 354,
+        "height": 306
+      }
+    }
+  },
+  {
+    "name": "depois-failure-440",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 111.234375,
+        "y": 386,
+        "width": 217.53125,
+        "height": 32
+      },
+      "stage": {
+        "x": 43,
+        "y": 386,
+        "width": 354,
+        "height": 242
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-lista-longa-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 16,
+        "y": 81,
+        "width": 288,
+        "height": 27
+      },
+      "search": {
+        "x": 61,
+        "y": 193,
+        "width": 226,
+        "height": 46
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 670,
+        "width": 320,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-downloads-lista-fim-320",
+    "width": 320,
+    "scrollWidth": 320,
+    "positions": {
+      "heading": {
+        "x": 16,
+        "y": 81,
+        "width": 288,
+        "height": 27
+      },
+      "search": {
+        "x": 61,
+        "y": -6773,
+        "width": 226,
+        "height": 46
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 670,
+        "width": 320,
+        "height": 70
+      }
+    }
+  },
+  {
+    "name": "depois-historico-zoom",
+    "width": 440,
+    "scrollWidth": 440,
+    "positions": {
+      "heading": {
+        "x": 62.5,
+        "y": 132.5,
+        "width": 315,
+        "height": 40
+      },
+      "tabbar": {
+        "x": 0,
+        "y": 868.25,
+        "width": 440,
+        "height": 87.75
+      }
+    }
+  }
+]

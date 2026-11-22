@@ -1,18 +1,32 @@
 import { MediaError } from './mediaContracts';
+import { canonicalLocalUri } from './libraryFiles';
 
-const statuses = new Set(['queued', 'downloading', 'completed', 'failed', 'cancelled']);
+const statuses = new Set(['queued', 'downloading', 'paused', 'completed', 'failed', 'cancelled']);
+const fileOwnerships = new Set(['managed', 'external']);
+const availabilityStates = new Set(['deleted']);
+const pointsTo = (record, uri) => canonicalLocalUri(record.fileUri) === uri;
 function copy(value) { return JSON.parse(JSON.stringify(value)); }
 
 export function validateLibrary(value) {
   if (!value || value.version !== 1 || !Array.isArray(value.downloads) || !Array.isArray(value.history)) {
     throw new MediaError('STORAGE_SCHEMA', 'O histórico local possui uma versão ou estrutura incompatível. Os dados foram preservados.');
   }
+  if (value.generatedUris !== undefined && (!Array.isArray(value.generatedUris)
+    || value.generatedUris.some(uri => !canonicalLocalUri(uri))
+    || new Set(value.generatedUris).size !== value.generatedUris.length)) {
+    throw new MediaError('STORAGE_RECORD', 'O índice de arquivos gerados está incompleto.');
+  }
   for (const list of [value.downloads, value.history]) {
     const ids = new Set();
     for (const record of list) {
       if (!record || typeof record.id !== 'string' || !record.id || typeof record.name !== 'string'
-        || !statuses.has(record.status) || ids.has(record.id)) {
-        throw new MediaError('STORAGE_SCHEMA', 'Há registros inválidos no armazenamento local. Os dados foram preservados.');
+        || !statuses.has(record.status) || ids.has(record.id)
+        || (record.fileOwnership !== undefined && !fileOwnerships.has(record.fileOwnership))
+        || (record.availability !== undefined && !availabilityStates.has(record.availability))
+        || (record.deletionPending !== undefined && record.deletionPending !== true)
+        || (record.fileOwnership !== undefined && record.status === 'completed' && (typeof record.fileUri !== 'string'
+          || !canonicalLocalUri(record.fileUri) || !Number.isSafeInteger(record.sizeBytes) || record.sizeBytes <= 0))) {
+        throw new MediaError('STORAGE_RECORD', 'Há registros inválidos no armazenamento local. Os dados foram preservados.');
       }
       ids.add(record.id);
     }
@@ -40,7 +54,7 @@ export function createMediaRepository(storage) {
     const operation = queue.then(async () => {
       await initialize();
       const next = copy(state);
-      change(next);
+      if (change(next) === false) return copy(state);
       validateLibrary(next);
       await storage.write(next);
       state = next;
@@ -64,6 +78,16 @@ export function createMediaRepository(storage) {
       upsert(next.downloads, record);
       upsert(next.history, record);
     }),
+    registerGenerated: record => transaction(next => {
+      if (next.generatedUris?.includes(record.fileUri)
+        || [...next.downloads, ...next.history].some(item => pointsTo(item, record.fileUri))) return false;
+      if ([...next.downloads, ...next.history].some(item => item.id === record.id)) {
+        throw new MediaError('STORAGE_RECORD', 'Esta identificação já pertence a outro arquivo.');
+      }
+      (next.generatedUris ??= []).push(record.fileUri);
+      upsert(next.downloads, record);
+      upsert(next.history, record);
+    }),
     addHistory: record => transaction(next => upsert(next.history, record)),
     updateHistory: (id, patch) => transaction(next => {
       const record = next.history.find(item => item.id === id);
@@ -73,6 +97,31 @@ export function createMediaRepository(storage) {
     removeHistory: id => transaction(next => {
       if (!next.history.some(record => record.id === id)) throw new MediaError('NOT_FOUND', 'O registro não está mais disponível.');
       next.history = next.history.filter(record => record.id !== id);
+    }),
+    removeDownload: id => transaction(next => {
+      const record = next.downloads.find(item => item.id === id);
+      if (!record || record.deletionPending || !['completed', 'failed', 'cancelled'].includes(record.status)) {
+        throw new MediaError('NOT_FOUND', 'O registro não está disponível para remoção.');
+      }
+      next.downloads = next.downloads.filter(item => item.id !== id);
+    }),
+    beginFileDeletion: (id, uri) => transaction(next => {
+      const record = next.downloads.find(item => item.id === id && item.fileUri === uri);
+      if (!record || record.status !== 'completed' || record.availability === 'deleted'
+        || [...next.downloads, ...next.history].some(item => item.id !== id && pointsTo(item, canonicalLocalUri(uri)))) {
+        throw new MediaError('FILE_IN_USE', 'O arquivo não está disponível para exclusão ou pertence a outro registro.');
+      }
+      if (record.deletionPending) return false;
+      record.deletionPending = true;
+    }),
+    resolveFileDeletion: (id, uri, deleted) => transaction(next => {
+      const record = next.downloads.find(item => item.id === id && item.fileUri === uri && item.deletionPending);
+      if (!record) return false;
+      delete record.deletionPending;
+      if (!deleted) return;
+      record.availability = 'deleted';
+      const history = next.history.find(item => item.id === id && item.fileUri === uri);
+      if (history) history.availability = 'deleted';
     }),
   };
 }
@@ -93,7 +142,8 @@ export function createJournalStorage(io) {
         try {
           const envelope = JSON.parse(await io.read(name));
           if (envelope.revision !== Number(pattern.exec(name)[1])) continue;
-          if (envelope.data?.version !== 1) throw new MediaError('STORAGE_SCHEMA', 'O armazenamento usa uma versão incompatível. Os dados foram preservados.');
+          if (!envelope.data || typeof envelope.data.version !== 'number') continue;
+          if (envelope.data.version !== 1) throw new MediaError('STORAGE_SCHEMA', 'O armazenamento usa uma versão incompatível. Os dados foram preservados.');
           const data = validateLibrary(envelope.data);
           // Advance past even a corrupt later generation, never overwrite it.
           revision = Number(pattern.exec(names[0])[1]);
@@ -117,6 +167,7 @@ export function createJournalStorage(io) {
         await io.move(temporary, name);
         revision = next;
       } catch {
+        await io.remove(temporary).catch(() => {});
         throw new MediaError('STORAGE_WRITE', 'Não foi possível salvar os dados locais. Verifique o espaço disponível e tente novamente.');
       }
       // Only our own old journal generations; never downloaded physical files.

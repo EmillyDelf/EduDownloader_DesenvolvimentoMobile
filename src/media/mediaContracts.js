@@ -79,12 +79,14 @@ export function matchesMediaSignature(binary, format) {
 }
 
 export const downloadTransitions = {
-  idle: ['validating'], validating: ['identifying', 'failed', 'idle'],
-  identifying: ['ready', 'failed', 'idle'], ready: ['queued', 'validating', 'idle'],
+  idle: ['validating', 'queued'], validating: ['identifying', 'failed', 'idle'],
+  identifying: ['ready', 'failed', 'idle'], ready: ['queued', 'validating', 'failed', 'idle'],
   queued: ['downloading', 'failed'], downloading: ['completed', 'failed', 'cancelled'],
   completed: ['validating', 'idle'], failed: ['validating', 'idle'], cancelled: ['validating', 'idle'],
+  paused: ['queued', 'validating', 'idle'],
 };
 
-export function canTransition(from, to) {
+export function canTransition(from, to, remote = false) {
+  if (remote && to === 'paused' && ['queued', 'downloading'].includes(from)) return true;
   return from === to || Boolean(downloadTransitions[from]?.includes(to));
 }

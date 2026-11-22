@@ -9,7 +9,12 @@ const compiled = new Map();
 const root = path.resolve(__dirname, '../..');
 
 // Contract tests use native controls as inert elements. This is not a device renderer.
-function harness(filename, { mockScreens = false, fontState = [true, null], width = 440, height = 956, mediaLibraryProps = { downloadProps: {}, historyProps: {} }, imagePicker } = {}) {
+function harness(filename, {
+  mockScreens = false, fontState = [true, null], width = 440, height = 956,
+  mediaLibraryProps = { downloadProps: {}, historyProps: {} },
+  imagePicker = { launchImageLibraryAsync: async () => ({ canceled: true }) },
+  moduleMocks = {},
+} = {}) {
   const states = [];
   const modules = new Map();
   const alerts = [];
@@ -17,6 +22,7 @@ function harness(filename, { mockScreens = false, fontState = [true, null], widt
   let index = 0;
   let focus;
   let cleanup;
+  let preventRemove;
   let loadedFonts;
   const dimensions = { width, height, fontScale: 1 };
   const react = {
@@ -63,20 +69,21 @@ function harness(filename, { mockScreens = false, fontState = [true, null], widt
         plugins: ['@babel/plugin-transform-react-jsx', '@babel/plugin-transform-modules-commonjs'],
       }).code);
     }
-    vm.runInNewContext(compiled.get(resolved), {
-      module, exports: module.exports, console,
-      require(request) {
+    const evaluate = vm.compileFunction(compiled.get(resolved), ['module', 'exports', 'require'], { filename: resolved });
+    evaluate(module, module.exports, request => {
+        if (Object.hasOwn(moduleMocks, request)) return moduleMocks[request];
         if (request === 'react') return react;
         if (request === 'react-native') return native;
         if (request === 'react-native-safe-area-context') return { SafeAreaProvider: 'SafeAreaProvider', SafeAreaView: 'SafeAreaView' };
         if (request === '@react-navigation/native') return {
           NavigationContainer: 'NavigationContainer', useFocusEffect: callback => { focus = callback; },
+          usePreventRemove: (prevent, callback) => { preventRemove = prevent ? callback : null; },
         };
         if (request === '@react-navigation/native-stack') return {
           createNativeStackNavigator: () => ({ Navigator: 'Stack.Navigator', Screen: 'Stack.Screen' }),
         };
         if (request === 'expo-status-bar') return { StatusBar: 'StatusBar' };
-        if (request === 'expo-image-picker' && imagePicker) return imagePicker;
+        if (request === 'expo-image-picker') return imagePicker;
         if (request.endsWith('/useMediaLibrary')) return { __esModule: true, default: () => mediaLibraryProps };
         if (request === 'expo-font') return { useFonts: fonts => { loadedFonts = fonts; return fontState; } };
         if (request.startsWith('@expo-google-fonts/')) return Object.fromEntries([
@@ -93,8 +100,7 @@ function harness(filename, { mockScreens = false, fontState = [true, null], widt
         if (fs.existsSync(target) && fs.statSync(target).isDirectory()) target = path.join(target, 'index.js');
         else if (!target.endsWith('.js')) target += '.js';
         return load(target);
-      },
-    }, { filename: resolved });
+    });
     return module.exports;
   }
 
@@ -104,12 +110,14 @@ function harness(filename, { mockScreens = false, fontState = [true, null], widt
     render(props = {}, name = 'default') {
       index = 0;
       focus = undefined;
+      preventRemove = null;
       const tree = exports[name](props);
       cleanup?.();
       cleanup = focus?.();
       return tree;
     },
     back() {
+      if (preventRemove) { preventRemove(); return true; }
       for (const listener of [...backListeners].reverse()) if (listener()) return true;
       return false;
     },

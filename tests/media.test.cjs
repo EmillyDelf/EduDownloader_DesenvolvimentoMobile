@@ -212,7 +212,10 @@ test('Terminal storage failure is visible and retry saves the actual result with
   const f = fixture(); await f.library.initialize(); f.library.setUrl('https://example.com/a'); await f.library.analyze();
   const operation = f.library.start(); await tick(); f.storage.fail = true; f.complete(); await operation;
   assert.equal(f.library.getSnapshot().flow.status, 'completed'); assert.ok(f.library.getSnapshot().storageError);
+  assert.equal(f.library.getSnapshot().flow.persistencePending, true);
+  assert.equal(f.library.getSnapshot().storageReady, true);
   f.storage.fail = false; assert.equal(await f.library.retryPersistence(), true);
+  assert.equal(f.library.getSnapshot().flow.persistencePending, false);
   assert.equal(f.prepared, 1); assert.equal(f.storage.value.history.length, 1);
   assert.equal(f.library.getSnapshot().storageError, '');
 });

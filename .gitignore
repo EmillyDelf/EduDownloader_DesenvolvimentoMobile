@@ -31,7 +31,61 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.*
+*.env
+.envrc
+*.dpapi
+*.pfx
+*.token
+token.txt
+token.json
+credentials.json
+credentials.*.json
+credentials.local.*
+secrets.json
+.secrets/
+
+# local tools, runtime and diagnostics
+.venv/
+venv/
+.tools/
+runtime/
+.cache/
+logs/
+tmp/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.exe
+*.dll
+*.log
+*.log.*
+*.stdout.txt
+*.stderr.txt
+*.tmp
+*.temp
+*.part
+*.part.*
+*.bak
+*.zip
+*.rar
+*.7z
+*.apk
+*.aab
+
+# generated media from local tests
+*.mp4
+*.mp3
+*.m4a
+*.webm
+*.mkv
+*.mov
+*.wav
+*.aac
+*.opus
+*.ogg
 
 # typescript
 *.tsbuildinfo

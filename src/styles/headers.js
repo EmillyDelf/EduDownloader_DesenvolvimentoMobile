@@ -21,6 +21,10 @@ export const headerStyles = StyleSheet.create({
     borderBottomColor: colors.borderInfo,
   },
 
+  spacer: {
+    flex: 1,
+  },
+
   accentWrapper: {
     backgroundColor: colors.surfaceHeaderAccent,
     borderBottomWidth: 1,
@@ -142,6 +146,10 @@ export const bottomNavigationStyles = StyleSheet.create({
     backgroundColor: colors.navSoftTint,
   },
 
+  librarySafeArea: {
+    backgroundColor: colors.surfaceSoft,
+  },
+
   navigation: {
     flexDirection: 'row',
   },
@@ -180,6 +188,15 @@ export const bottomNavigationStyles = StyleSheet.create({
     ...typography.tabLabelActive,
     alignSelf: 'stretch',
     color: colors.success,
+  },
+
+  libraryLabel: {
+    color: colors.textMuted72,
+  },
+
+  libraryLabelSelected: {
+    ...typography.tabLabelActive,
+    color: colors.primary,
   },
 });
 

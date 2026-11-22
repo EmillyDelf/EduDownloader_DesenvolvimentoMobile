@@ -22,10 +22,9 @@ A proposta é reduzir a dependência de plataformas externas e ferramentas compl
 - Armazenamento local dos arquivos concluídos.
 
 ### Conversão de vídeos
-- Interface dedicada à conversão de vídeos da galeria em áudio.
-- Fluxo visual integrado à navegação principal.
-
-*Observação: a interface está integrada, mas a implementação da conversão efetiva ainda depende de desenvolvimento.*
+- Seleção de um vídeo da galeria e exibição do nome, da duração e do tamanho quando disponíveis.
+- Escolha de qualidade de áudio de 128, 192 ou 320 kbps.
+- Processamento e exportação de áudio pendentes.
 
 ### Criação de PDF
 - Seleção de imagens da galeria.
@@ -37,7 +36,7 @@ A proposta é reduzir a dependência de plataformas externas e ferramentas compl
 - Escolha da orientação.
 - Configuração das margens.
 - Geração do documento PDF.
-- Visualização e compartilhamento do arquivo gerado.
+- Progresso da geração, visualização, exportação para uma pasta e compartilhamento do arquivo gerado.
 
 ### Downloads
 - Listagem dos arquivos e operações.
@@ -49,8 +48,8 @@ A proposta é reduzir a dependência de plataformas externas e ferramentas compl
 
 ### Histórico
 - Registro das atividades realizadas.
-- Histórico de downloads e conversões.
-- Identificação de atividades relacionadas a PDF.
+- Histórico de downloads realizados.
+- Filtros de atividade para os tipos reconhecidos pela interface.
 - Agrupamento de registros por data.
 - Filtros por tipo de atividade.
 - Abertura de arquivos disponíveis.
@@ -88,7 +87,9 @@ EduDownloader_DesenvolvimentoMobile/
 │   ├── downloads-historico.md
 │   ├── GOAL06_DOWNLOADS_HISTORICO.md
 │   ├── INTEGRACAO_EMILLY_PDF.md
-│   └── INTEGRACAO_EQUIPE.md
+│   ├── INTEGRACAO_EQUIPE.md
+│   ├── PDF_TEST_MATRIX.md
+│   └── RELATORIO_INTEGRACAO_EQUIPE.md
 │
 ├── src/
 │   ├── components/
@@ -118,7 +119,7 @@ EduDownloader_DesenvolvimentoMobile/
 - **src/hooks/**: hooks personalizados.
 - **src/media/**: contratos, serviços e gerenciamento de mídias.
 - **src/navigation/**: configuração e integração da navegação.
-- **src/pdf/**: funções auxiliares relacionadas à seleção de imagens para PDF.
+- **src/pdf/**: seleção de imagens, montagem e gravação do PDF.
 - **src/screens/**: telas e módulos da aplicação.
 - **src/styles/**: estilos, cores, tipografia e configurações responsivas.
 - **tests/**: testes automatizados.
@@ -135,7 +136,7 @@ A aplicação possui uma navegação principal com cinco opções:
 
 A navegação é estruturada com React Navigation e utiliza uma barra inferior compartilhada entre as telas principais.
 
-Também existem rotas específicas para conversão de vídeos e demonstrações dos componentes.
+O fluxo da galeria abre a escolha de qualidade de áudio. A aba PDF reúne seleção, organização, configuração, geração e conclusão. As demonstrações continuam acessíveis pela Home. Consulte o [relatório da integração da equipe](docs/RELATORIO_INTEGRACAO_EQUIPE.md) para o escopo validado e o roteiro no celular.
 
 ## Componentes reutilizáveis
 

@@ -100,11 +100,12 @@ test('Downloads renders supplied names, formats, optional sizes, statuses and pr
   assert.equal(list.props.data.length, 3);
   const active = list.props.renderItem({ item: items[0] });
   assert.ok(textContent(active).includes('Aula de Matemática.mp4'));
-  assert.ok(textContent(active).includes('MP4 · 1 MB'));
+  assert.ok(textContent(active).includes('Vídeo • MP4 • 1 MB'));
   assert.equal(findAll(active, 'ProgressBar')[0].props.progress, 42);
   assert.equal(findAll(active, 'FileStatus')[0].props.status, 'downloading');
   const completed = list.props.renderItem({ item: items[1] });
-  assert.equal(findAll(completed, 'ProgressBar')[0].props.progress, 100);
+  assert.match(textContent(completed), /Áudio • MP3/);
+  assert.equal(findAll(completed, 'ProgressBar').length, 0, 'The compact library card shows metadata; only active progress needs a bar');
   assert.equal(findAll(completed, 'Pressable').length, 0, 'No open action without a real callback');
   assert.equal(textContent(completed).includes('0 B'), false);
   const unknown = list.props.renderItem({ item: { id: 'unknown', name: 'Arquivo', status: 'queued' } });
@@ -202,7 +203,7 @@ test('History presents received metadata and completion/failure without inventin
   assert.equal(textContent(list.props.renderSectionHeader({ section: list.props.sections[0] })), 'Hoje');
   const completed = list.props.renderItem({ item: items[1] });
   assert.ok(textContent(completed).includes('Áudio de História.mp3'));
-  assert.ok(textContent(completed).includes('Conversão · MP3'));
+  assert.ok(textContent(completed).includes('Conversão • MP3'));
   assert.equal(findAll(completed, 'FileStatus')[0].props.status, 'completed');
   const failed = list.props.renderItem({ item: items[2] });
   assert.equal(findAll(failed, 'ErrorMessage')[0].props.message, items[2].error);
@@ -231,14 +232,14 @@ test('History opens completed records only and forwards per-item retry callbacks
   const list = findAll(screenHarness('HistoryScreen')({ items, onOpenItem: item => { opened = item; }, onRetryItem: item => { retried = item; } }), 'SectionList')[0];
   const completed = list.props.renderItem({ item: items[1] });
   assert.equal(opened, undefined);
-  completed.props.onPress();
+  findAll(completed, 'Pressable')[0].props.onPress();
   assert.equal(opened, items[1]);
   const failed = list.props.renderItem({ item: items[2] });
-  assert.equal(failed.props.onPress, undefined);
+  assert.equal(findAll(failed, 'Pressable').length, 0);
   findAll(failed, 'ErrorMessage')[0].props.onRetry();
   assert.equal(retried, items[2]);
   const passive = findAll(screenHarness('HistoryScreen')({ items }), 'SectionList')[0].props.renderItem({ item: items[1] });
-  assert.equal(passive.props.onPress, undefined);
+  assert.equal(findAll(passive, 'Pressable').length, 0);
 });
 
 test('List keys use stable ids, refresh stays controlled, and navigation remains optional', () => {
@@ -287,6 +288,10 @@ test('Status text, unknown sizes and invalid dates stay explicit instead of fabr
   assert.equal(utils.formatFileSize(2.5 * 1024 ** 2), '2,5 MB');
   assert.equal(utils.getRecordDate(null), null);
   assert.equal(utils.formatRecordTime('invalid'), '');
+  assert.equal(utils.formatLibraryDate('invalid'), '');
+  const today = new Date(2026, 10, 12, 14);
+  assert.equal(utils.formatLibraryDate(items[0].completedAt, today), 'Hoje');
+  assert.equal(utils.formatLibraryDate(items[2].completedAt, today), 'Ontem');
   assert.equal(utils.getStatusLabel('unexpected'), 'Status não informado');
   assert.equal(textContent(parts.FileStatus({ status: 'completed' })), 'Concluído');
   assert.equal(textContent(parts.FileStatus({ status: 'failed' })), 'Falha');

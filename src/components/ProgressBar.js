@@ -7,6 +7,8 @@ export default function ProgressBar({
   showPercentage = true,
   accessibilityLabel = 'Progresso',
   style,
+  trackStyle,
+  fillStyle,
 }) {
   const boundedProgress = Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : 0;
   const percentage = `${Math.round(boundedProgress)}%`;
@@ -19,8 +21,8 @@ export default function ProgressBar({
       accessibilityValue={{ min: 0, max: 100, now: boundedProgress, text: percentage }}
       style={[feedbackStyles.progressContainer, style]}
     >
-      <View style={feedbackStyles.progressTrack}>
-        <View style={[feedbackStyles.progressFill, { width: `${boundedProgress}%` }]} />
+      <View style={trackStyle ? [feedbackStyles.progressTrack, trackStyle] : feedbackStyles.progressTrack}>
+        <View style={[feedbackStyles.progressFill, { width: `${boundedProgress}%` }, fillStyle]} />
       </View>
 
       {showPercentage ? <Text style={feedbackStyles.progressPercentage}>{percentage}</Text> : null}

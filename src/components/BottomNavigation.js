@@ -13,10 +13,11 @@ const navigationTabs = [
   { id: 'profile', label: 'Perfil', icon: require('../../assets/navigation/profile.png') },
 ];
 
-export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
+export default function BottomNavigation({ activeTab = 'home', onTabPress, variant = 'default' }) {
   const screen = useResponsive();
+  const isLibrary = variant === 'library';
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={bottomNavigationStyles.safeArea}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={isLibrary ? bottomNavigationStyles.librarySafeArea : bottomNavigationStyles.safeArea}>
       <View accessibilityRole='tablist' style={bottomNavigationStyles.navigation}>
         {navigationTabs.map(tab => {
           const isSelected = activeTab === tab.id;
@@ -30,21 +31,22 @@ export default function BottomNavigation({ activeTab = 'home', onTabPress }) {
               accessibilityState={{ selected: isSelected }}
               style={({ pressed }) => [
                 bottomNavigationStyles.tab,
-                isSelected && bottomNavigationStyles.tabSelected,
+                isSelected && !isLibrary && bottomNavigationStyles.tabSelected,
                 pressed && bottomNavigationStyles.tabPressed,
               ]}
             >
               <Image
                 source={tab.icon}
                 resizeMode='contain'
-                tintColor={isSelected ? colors.success : colors.textSecondary}
+                tintColor={isSelected ? colors.success : isLibrary ? colors.textMuted72 : colors.textSecondary}
                 accessible={false}
                 style={bottomNavigationStyles.icon}
               />
               <Text
                 style={[
                   bottomNavigationStyles.label,
-                  isSelected && bottomNavigationStyles.labelSelected,
+                  isLibrary && bottomNavigationStyles.libraryLabel,
+                  isSelected && (isLibrary ? bottomNavigationStyles.libraryLabelSelected : bottomNavigationStyles.labelSelected),
                   { fontSize: screen.scaleFont(12, { min: 11, max: 14 }) },
                 ]}
               >

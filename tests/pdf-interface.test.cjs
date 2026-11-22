@@ -214,15 +214,18 @@ test('Android back goes organization to selection to Home and the PDF tab preser
   assert.equal(page.app.listeners, 0);
 });
 
-test('Final PDF action is an imported Alert explaining future generation, without fake success or media writes', () => {
+test('Organizing advances to settings without premature success or media writes from earlier stages', () => {
   const page = pdfNavigation();
-  findAll(page.select('pdf'), 'SelectImagesScreen')[0].props.onContinue(images(2));
-  findAll(page.render(), 'OrganizeImagesScreen')[0].props.onContinue(images(2));
-  assert.equal(page.app.alerts.length, 1);
-  const message = page.app.alerts[0].join(' ');
-  assert.ok(message.includes('implementada futuramente'));
-  assert.ok(message.includes('Nenhum arquivo foi criado'));
-  assert.equal(/sucesso|gerado com sucesso/i.test(message), false);
+  const selected = images(2);
+  findAll(page.select('pdf'), 'SelectImagesScreen')[0].props.onContinue(selected);
+  findAll(page.render(), 'OrganizeImagesScreen')[0].props.onContinue([selected[1], selected[0]]);
+  const tree = page.render();
+  assert.deepEqual(uris(findAll(tree, 'PdfSettingsScreen')[0].props.images), [selected[1].uri, selected[0].uri]);
+  assert.equal(findAll(tree, 'PdfCompleteScreen').length, 0);
+  assert.equal(findAll(tree, 'PdfProgressScreen').length, 0);
+  assert.equal(page.app.alerts.length, 0);
+  assert.equal(page.app.back(), true);
+  assert.deepEqual(uris(findAll(page.render(), 'OrganizeImagesScreen')[0].props.images), [selected[1].uri, selected[0].uri]);
   for (const file of [selectionFile, organizationFile, 'src/pdf/imageSelection.js']) {
     const source = fs.readFileSync(path.join(root, file), 'utf8');
     assert.equal(/pdf-lib|expo-print|expo-sharing|expo-file-system|mediaLibrary|useMediaLibrary/.test(source), false, file);

@@ -11,6 +11,7 @@ export default function Input({
   keyboardType = 'default',
   autoCapitalize = 'sentences',
   autoCorrect = true,
+  secureTextEntry = false,
   label,
   error,
   variant = 'default',
@@ -19,15 +20,15 @@ export default function Input({
   onRightAction,
   containerStyle,
   inputStyle,
+  fieldStyle,
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const isSearch = variant === 'search';
   const isAccent = variant === 'accent';
   const hasAddons = Boolean(leftIcon || rightActionLabel);
 
+  const variantStyle = isSearch ? inputStyles.search : isAccent ? inputStyles.accent : null;
   const stateStyles = [
-    isSearch && inputStyles.search,
-    isAccent && inputStyles.accent,
     isFocused && editable && inputStyles.focused,
     error && inputStyles.error,
     !editable && inputStyles.disabled,
@@ -41,6 +42,8 @@ export default function Input({
     keyboardType,
     autoCapitalize,
     autoCorrect,
+    secureTextEntry,
+    ...(secureTextEntry ? { autoComplete: 'off', textContentType: 'none', importantForAutofill: 'no' } : {}),
     onFocus: () => setIsFocused(true),
     onBlur: () => setIsFocused(false),
     accessibilityLabel: label || placeholder,
@@ -54,7 +57,7 @@ export default function Input({
       {label ? <Text style={[inputStyles.label, isAccent && inputStyles.labelAccent]}>{label}</Text> : null}
 
       {hasAddons ? (
-        <View style={[inputStyles.fieldWrapper, ...stateStyles]}>
+        <View style={[inputStyles.fieldWrapper, variantStyle, fieldStyle, ...stateStyles]}>
           {leftIcon}
           <TextInput
             {...textInputProps}
@@ -84,7 +87,7 @@ export default function Input({
       ) : (
         <TextInput
           {...textInputProps}
-          style={[inputStyles.input, ...stateStyles, inputStyle]}
+          style={[inputStyles.input, variantStyle, fieldStyle, ...stateStyles, inputStyle]}
         />
       )}
 

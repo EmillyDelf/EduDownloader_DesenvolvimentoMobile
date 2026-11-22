@@ -13,6 +13,15 @@ export function getStatusLabel(status) {
   return statusLabels[status] || 'Status não informado';
 }
 
+export function isFileAvailable(item) {
+  return item.status === 'completed' && !item.deletionPending && !['missing', 'unavailable', 'deleted'].includes(item.availability);
+}
+
+export function formatPageCount(item) {
+  return Number.isInteger(item.pageCount) && item.pageCount > 0
+    ? `${item.pageCount} ${item.pageCount === 1 ? 'página' : 'páginas'}` : '';
+}
+
 export function formatFileSize(bytes) {
   if (!Number.isFinite(bytes) || bytes < 0) return '';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -37,6 +46,17 @@ export function getRecordDate(value) {
   if (value === undefined || value === null || value === '') return null;
   const date = new Date(value);
   return Number.isFinite(date.getTime()) ? date : null;
+}
+
+export function formatLibraryDate(value, referenceDate = new Date()) {
+  const date = getRecordDate(value);
+  if (!date) return '';
+  const today = new Date(referenceDate);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return 'Hoje';
+  if (date.toDateString() === yesterday.toDateString()) return 'Ontem';
+  return new Intl.DateTimeFormat('pt-BR').format(date);
 }
 
 export function getHistorySections(items, activityType, referenceDate = new Date()) {

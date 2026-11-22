@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Image, SectionList, Text, View } from 'react-native';
+import { Image, Pressable, SectionList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../components/Header';
 import Card from '../components/Card';
@@ -9,11 +9,11 @@ import ErrorMessage from '../components/ErrorMessage';
 import BottomNavigation from '../components/BottomNavigation';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import { getResponsiveContentStyle, globalStyles, responsive } from '../styles';
-import { FileFilters, FileIcon, FileStatus } from './FileScreenParts';
-import { formatRecordTime, getFileFormat, getHistorySections } from './fileScreenUtils';
+import { FileAvailability, FileFilters, FileIcon, FileStatus } from './FileScreenParts';
+import { formatPageCount, formatRecordTime, getFileFormat, getHistorySections, getStatusLabel, isFileAvailable } from './fileScreenUtils';
 import styles from './fileScreenStyles';
 
-const filters = [{ id: 'all', label: 'Tudo' }, { id: 'download', label: 'Downloads' }, { id: 'conversion', label: 'Conversões' }, { id: 'pdf', label: 'PDF' }];
+const filters = [{ id: 'all', label: 'Tudo', width: 64 }, { id: 'download', label: 'Downloads', width: 92 }, { id: 'conversion', label: 'Conversões', width: 96 }, { id: 'pdf', label: 'PDF', width: 64 }];
 const activityLabels = { download: 'Download', conversion: 'Conversão', pdf: 'PDF' };
 
 export default function HistoryScreen({
@@ -22,10 +22,12 @@ export default function HistoryScreen({
   error = '',
   onRetry,
   onRetryItem,
+  canRetryItem,
   onOpenItem,
   onRefresh,
   refreshing = false,
   onBack,
+  showBack = true,
   onTabPress,
   referenceDate,
   safeAreaEdges,
@@ -73,29 +75,44 @@ export default function HistoryScreen({
   }
 
   function renderRecord({ item }) {
-    const metadata = [activityLabels[item.activityType], getFileFormat(item), formatRecordTime(item.completedAt)].filter(Boolean).join(' · ');
-    const canOpen = item.status === 'completed' && typeof onOpenItem === 'function';
+    const activity = activityLabels[item.activityType];
+    const format = getFileFormat(item);
+    const metadata = [activity, item.quality || formatPageCount(item) || (format === activity ? '' : format), formatRecordTime(item.completedAt)].filter(Boolean).join(' • ');
+    const canOpen = isFileAvailable(item) && typeof onOpenItem === 'function';
+    const description = (
+      <>
+        <Text style={styles.fileTitle}>{item.name}</Text>
+        {metadata ? <Text style={styles.metadata}>{metadata}</Text> : null}
+      </>
+    );
     return (
-      <Card variant='historyItem' style={styles.card} onPress={canOpen ? () => openItem(item) : undefined} accessibilityLabel={canOpen ? `Abrir ${item.name}` : undefined}>
-        <View style={styles.row}>
+      <Card variant='historyItem' style={[styles.card, styles.historyCard]}>
+        <View style={[styles.row, styles.historyRow]}>
           <FileIcon item={item} history />
           <View style={styles.details}>
-            <Text style={styles.fileTitle}>{item.name}</Text>
-            {metadata ? <Text style={styles.metadata}>{metadata}</Text> : null}
-            <View style={styles.statusRow}><FileStatus status={item.status} /></View>
+            {canOpen ? (
+              <Pressable accessibilityRole='button' accessibilityLabel={`Abrir ${item.name}`}
+                accessibilityHint={[metadata, getStatusLabel(item.status)].filter(Boolean).join('. ')}
+                hitSlop={{ top: 8, left: 4, right: 4 }} onPress={() => openItem(item)}
+                style={({ pressed }) => [styles.historyDescription, pressed && styles.pressed]}>
+                {description}
+              </Pressable>
+            ) : <View style={styles.historyDescription}>{description}</View>}
+            <View style={styles.statusRow}>
+              {typeof onDeleteItem === 'function' ? (
+                <Button title='Excluir' variant='link' size='sm' fullWidth={false} style={styles.historyDelete} textStyle={styles.deleteLabel}
+                  accessibilityLabel={`Excluir registro de ${item.name}`}
+                  disabled={deletingId === item.id || deletingIds.includes(item.id)}
+                  onPress={() => { if (!deleteLock.current && !deletingIds.includes(item.id)) setPendingDelete(item); }} />
+              ) : null}
+              <FileStatus status={item.status} />
+            </View>
           </View>
         </View>
+        {(item.availability && item.availability !== 'available') || item.deletionPending ? <FileAvailability item={item} /> : null}
         {item.status === 'failed' ? (
-          <ErrorMessage message={item.error || 'Esta atividade não foi concluída.'} onRetry={typeof onRetryItem === 'function' ? () => onRetryItem(item) : undefined} />
-        ) : null}
-        {typeof onDeleteItem === 'function' ? (
-          <Button title='Excluir registro' variant='link' size='sm' fullWidth={false}
-            accessibilityLabel={`Excluir registro de ${item.name}`}
-            disabled={deletingId === item.id || deletingIds.includes(item.id)}
-            onPress={event => {
-              event?.stopPropagation?.();
-              if (!deleteLock.current && !deletingIds.includes(item.id)) setPendingDelete(item);
-            }} />
+          <ErrorMessage message={item.error || 'Esta atividade não foi concluída.'}
+            onRetry={typeof onRetryItem === 'function' && (canRetryItem ? canRetryItem(item) : !item.remoteStrategy) ? () => onRetryItem(item) : undefined} />
         ) : null}
       </Card>
     );
@@ -113,14 +130,15 @@ export default function HistoryScreen({
 
   return (
     <View style={globalStyles.screen} testID='history-screen'>
-      <SafeAreaView edges={safeAreaEdges || (hasNavigation ? ['top', 'left', 'right'] : ['top', 'left', 'right', 'bottom'])} style={globalStyles.safeArea}>
+      <SafeAreaView edges={safeAreaEdges || (hasNavigation ? ['top', 'left', 'right'] : ['top', 'left', 'right', 'bottom'])} style={styles.librarySafeArea}>
         <Header
           variant='hero'
           title='Histórico'
           subtitle='Acompanhe suas atividades recentes'
-          onBack={onBack}
-          logo={<Image accessible={false} source={require('../../assets/files/logo.png')} style={[styles.logo, { marginRight: 9 - screen.heroHorizontalPadding }]} />}
+          onBack={showBack ? onBack : undefined}
+          logo={<Image accessible={false} source={require('../../assets/files/logo.png')} style={styles.logo} />}
           style={styles.hero}
+          contentStyle={[getResponsiveContentStyle(screen.width, 'main'), styles.heroContent]}
         />
         {actionError || localError || (storageError && !error) || storageWarning || deletingId ? (
           <View style={styles.actionFeedback}>
@@ -131,7 +149,7 @@ export default function HistoryScreen({
           </View>
         ) : null}
         <SectionList
-          style={styles.list}
+          style={[styles.list, styles.listSurface]}
           contentContainerStyle={[styles.content, getResponsiveContentStyle(screen.width, 'main')]}
           sections={isLoading || error ? [] : sections}
           keyExtractor={item => String(item.id)}
@@ -145,7 +163,7 @@ export default function HistoryScreen({
           refreshing={refreshing}
         />
       </SafeAreaView>
-      {hasNavigation ? <BottomNavigation activeTab='history' onTabPress={onTabPress} /> : null}
+      {hasNavigation ? <BottomNavigation activeTab='history' variant='library' onTabPress={onTabPress} /> : null}
       <ConfirmationDialog visible={Boolean(pendingDelete)}
         title='Excluir registro do histórico?'
         description='Somente este registro será removido. O arquivo físico no dispositivo será preservado.'

@@ -11,7 +11,7 @@ function renderHeaderAction(label, onPress, onDark = false, icon = null) {
       accessibilityLabel={label}
       style={({ pressed }) => [headerStyles.action, pressed && headerStyles.actionPressed]}
     >
-      {icon ? (
+      {React.isValidElement(icon) ? icon : icon ? (
         <Image source={icon} resizeMode='contain' accessible={false} style={{ width: 20, height: 20, alignSelf: 'center' }} />
       ) : (
         <Text style={[headerStyles.actionText, onDark && headerStyles.actionTextOnDark]}>
@@ -46,6 +46,7 @@ export default function Header({
   logo = null,
   showAccentBar = false,
   contentStyle,
+  titleStyle,
   style,
 }) {
   const screen = useResponsive();
@@ -67,7 +68,7 @@ export default function Header({
         ) : null}
 
         <View style={[headerStyles.heroContent, contentStyle]}>
-          <Text accessibilityRole='header' style={headerStyles.heroTitle}>
+          <Text accessibilityRole='header' style={titleStyle ? [headerStyles.heroTitle, titleStyle] : headerStyles.heroTitle}>
             {title}
           </Text>
           {subtitle ? <Text style={headerStyles.heroSubtitle}>{subtitle}</Text> : null}
@@ -76,16 +77,16 @@ export default function Header({
     );
   }
 
+  const compactTitleStyle = showAccentBar ? headerStyles.titleAccent : headerStyles.title;
   const content = (
     <>
       {onBack ? renderHeaderAction('Voltar', onBack, false, backIcon) : null}
 
-      <Text
-        accessibilityRole='header'
-        style={showAccentBar ? headerStyles.titleAccent : headerStyles.title}
-      >
-        {title}
-      </Text>
+      {title ? (
+        <Text accessibilityRole='header' style={titleStyle ? [compactTitleStyle, titleStyle] : compactTitleStyle}>
+          {title}
+        </Text>
+      ) : <View style={headerStyles.spacer} />}
 
       {rightActionLabel && onRightAction
         ? renderHeaderAction(rightActionLabel, onRightAction)

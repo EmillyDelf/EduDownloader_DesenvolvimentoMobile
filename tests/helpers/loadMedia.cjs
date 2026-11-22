@@ -26,7 +26,7 @@ function loadMedia(name, overrides = {}) {
     }, { filename: resolved });
     return module.exports;
   }
-  return load(path.join(root, name));
+  return Array.isArray(name) ? name.map(file => load(path.join(root, file))) : load(path.join(root, name));
 }
 
 function deferred() {

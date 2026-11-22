@@ -69,7 +69,7 @@ export default function HomeScreen({ navigation, onTabPress }) {
         <View style={cardsContainerStyle}>
           <Card
             variant='soft'
-            onPress={() => onTabPress?.('downloads')}
+            onPress={() => navigation?.navigate('MediaDownload')}
             accessibilityLabel='Download de mídia. Baixe vídeos e áudios em MP4 ou MP3'
             style={styles.primaryActionCard}
           >

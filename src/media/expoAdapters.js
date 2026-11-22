@@ -1,5 +1,6 @@
 import { matchesMediaSignature, mediaMimeTypes, MediaError } from './mediaContracts';
 import { createJournalStorage } from './mediaRepository';
+import { canonicalLocalUri, createLibraryFileServices } from './libraryFiles';
 
 function header(headers, name) {
   const entry = Object.entries(headers || {}).find(([key]) => key.toLowerCase() === name);
@@ -19,9 +20,14 @@ export function createExpoStorage(fs, documentDirectory) {
   });
 }
 
-export function createExpoFileServices({ fs, documentDirectory, platform, intentLauncher, sharing }) {
+export function createExpoFileServices({ fs, documentDirectory, platform, intentLauncher, sharing, File, FileMode, Directory }) {
+  const library = createLibraryFileServices({ fs, documentDirectory, platform, intentLauncher, sharing, File, FileMode, Directory });
   const directory = documentDirectory ? `${documentDirectory}edudownloader/downloads/` : null;
   const supported = ['android', 'ios'].includes(platform) && Boolean(directory?.startsWith('file://'));
+  function downloadPath(id, format) {
+    return directory && typeof id === 'string' && /^[a-zA-Z0-9_-]{1,70}$/.test(id) && ['MP4', 'MP3'].includes(format)
+      ? `${directory}${id}.${format.toLowerCase()}` : null;
+  }
   function owned(uri) {
     return typeof uri === 'string' && directory && uri.startsWith(directory)
       && /^[a-zA-Z0-9_-]+\.(mp4|mp3)(\.part)?$/.test(uri.slice(directory.length));
@@ -29,9 +35,70 @@ export function createExpoFileServices({ fs, documentDirectory, platform, intent
   async function removePartial(uri) {
     if (owned(uri) && uri.endsWith('.part')) await fs.deleteAsync(uri, { idempotent: true });
   }
+  async function storage(action) {
+    try { return await action(); }
+    catch { throw new MediaError('LOCAL_STORAGE', 'Não foi possível gravar ou verificar o arquivo. Confira o espaço disponível no dispositivo.'); }
+  }
+
+  const remoteDisk = {
+    async paths(id, format) {
+      if (!supported || !File || !/^[a-zA-Z0-9_-]{1,70}$/.test(id) || !['MP4', 'MP3'].includes(format)) {
+        throw new MediaError('NO_DOWNLOAD', 'O armazenamento local não está disponível para esta operação.');
+      }
+      await storage(() => fs.makeDirectoryAsync(directory, { intermediates: true }));
+      const destination = `${directory}${id}.${format.toLowerCase()}`;
+      return { destination, temporary: destination + '.part' };
+    },
+    async size(uri) {
+      const info = await storage(() => fs.getInfoAsync(uri));
+      if (info.exists && info.isDirectory) throw new MediaError('LOCAL_STORAGE', 'O caminho do arquivo local não está disponível.');
+      return info.exists ? info.size : null;
+    },
+    async write(uri) {
+      return storage(async () => {
+        const file = new File(uri);
+        await file.create();
+        const handle = file.open(FileMode.WriteOnly);
+        return { write: bytes => storage(() => handle.writeBytes(bytes)), close: () => storage(() => handle.close()) };
+      });
+    },
+    async read(uri) {
+      return storage(() => {
+        const handle = new File(uri).open(FileMode.ReadOnly);
+        return { read: count => storage(() => handle.readBytes(count)), close: () => storage(() => handle.close()) };
+      });
+    },
+    freeBytes: () => storage(() => fs.getFreeDiskStorageAsync()),
+    remove: uri => storage(() => removePartial(uri)),
+    async move(temporary, destination) {
+      await storage(() => new File(temporary).move(new File(destination), { overwrite: false }));
+    },
+  };
 
   return {
+    ...library,
     supported,
+    remoteDisk,
+    confirmDownloadLocation(result, record) {
+      const destination = canonicalLocalUri(downloadPath(record.id, record.format));
+      return Boolean(destination && destination === canonicalLocalUri(result.fileUri));
+    },
+    async recoverDownload(record) {
+      const fileUri = downloadPath(record.id, record.format);
+      if (!supported || !canonicalLocalUri(fileUri) || mediaMimeTypes[record.format] !== record.mimeType
+        || (record.remoteStrategy && !record.remote?.jobId)) return null;
+      const info = await fs.getInfoAsync(fileUri);
+      if (!info.exists || info.isDirectory || !Number.isSafeInteger(info.size) || info.size <= 0) return null;
+      const prefix = await fs.readAsStringAsync(fileUri, { encoding: fs.EncodingType?.Base64 || 'base64', position: 0, length: 64 });
+      if (!matchesMediaSignature(globalThis.atob(prefix), record.format)) return null;
+      // Only a previously promoted final file is eligible. There is no server checksum in the old checkpoint.
+      return { fileUri, sizeBytes: info.size, mimeType: record.mimeType };
+    },
+    async discardRemotePartial(id, format) {
+      if (supported && /^[a-zA-Z0-9_-]{1,70}$/.test(id) && ['MP4', 'MP3'].includes(format)) {
+        await removePartial(`${directory}${id}.${format.toLowerCase()}.part`);
+      }
+    },
     async prepare(option, id, { onProgress, onTransferEnd } = {}) {
       if (!supported) throw new MediaError('NO_DOWNLOAD', 'Download local disponível somente em Android e iOS com armazenamento compatível.');
       if (!/^[a-zA-Z0-9_-]+$/.test(id) || mediaMimeTypes[option.format] !== option.mimeType) {
@@ -112,27 +179,6 @@ export function createExpoFileServices({ fs, documentDirectory, platform, intent
         },
       };
       return handle;
-    },
-    async open(item) {
-      if (!supported || item?.status !== 'completed' || !owned(item.fileUri) || item.fileUri.endsWith('.part')) {
-        throw new MediaError('NO_LOCAL_FILE', 'Este registro não possui um arquivo local válido disponível para abertura.');
-      }
-      const info = await fs.getInfoAsync(item.fileUri);
-      if (!info.exists || info.isDirectory || !info.size) throw new MediaError('FILE_MISSING', 'O arquivo não está mais disponível no dispositivo.');
-      const mimeType = mediaMimeTypes[item.format];
-      if (!mimeType) throw new MediaError('UNSUPPORTED_FILE', 'Não há um mecanismo de abertura configurado para esse formato.');
-      try {
-        if (platform === 'android') {
-          const uri = await fs.getContentUriAsync(item.fileUri);
-          await intentLauncher.startActivityAsync('android.intent.action.VIEW', { data: uri, flags: 1, type: mimeType });
-        } else {
-          if (!await sharing.isAvailableAsync()) throw new MediaError('NO_APP', 'A abertura por aplicativos compatíveis não está disponível.');
-          await sharing.shareAsync(item.fileUri, { mimeType, UTI: item.format === 'MP4' ? 'public.mpeg-4' : 'public.mp3', dialogTitle: 'Abrir arquivo com aplicativo compatível' });
-        }
-      } catch (error) {
-        if (error instanceof MediaError) throw error;
-        throw new MediaError('OPEN_FAILED', 'Não foi possível abrir o arquivo. Verifique se há um aplicativo compatível instalado.');
-      }
     },
   };
 }

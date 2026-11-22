@@ -29,23 +29,28 @@ test('Integrated entry waits for fonts, loads Inter and Montserrat, and exposes 
 
 // Adapted from Paulo's route-registration test: retain both routes and extend
 // the entry to the four-screen integration and the preserved demonstrations.
-test('Native stack registers the main entry, converter and both previews without duplicating a bottom menu', () => {
+test('Native stack registers the main entry, both media routes, format choice and previews without duplicating a bottom menu', () => {
   const app = harness(navigationFile, { mockScreens: true });
   const tree = app.render({ downloadProps: { isLoading: true } });
   assert.equal(findAll(tree, 'NavigationContainer').length, 1);
   assert.equal(findAll(tree, 'Stack.Navigator')[0].props.initialRouteName, 'Main');
   const screens = findAll(tree, 'Stack.Screen');
-  assert.deepEqual(screens.map(node => node.props.name), ['Main', 'ConvertGalleryVideo', 'ComponentsPreview', 'FilesPreview']);
+  assert.deepEqual(screens.map(node => node.props.name), ['Main', 'ConvertGalleryVideo', 'FormatChoice', 'ComponentsPreview', 'FilesPreview', 'MediaDownload']);
   const navigation = { goBack() {} };
   const main = screens[0].props.children({ navigation });
   assert.equal(main.props.navigation, navigation);
   assert.equal(main.props.downloadProps.isLoading, true);
   assert.equal(screens[1].props.component, 'ConvertGalleryVideoScreen');
-  assert.equal(screens[2].props.component, 'ComponentsPreview');
+  assert.equal(screens[2].props.component, 'FormatChoiceScreen');
+  assert.equal(screens[3].props.component, 'ComponentsPreview');
   let backs = 0;
-  const files = screens[3].props.component({ navigation: { goBack: () => { backs += 1; } } });
+  const files = screens[4].props.component({ navigation: { goBack: () => { backs += 1; } } });
   files.props.onBack();
   assert.equal(backs, 1);
+  const download = screens[5].props.component({ navigation: { goBack: () => { backs += 1; } } });
+  assert.equal(download.type, 'MediaDownloadForm');
+  download.props.onExit();
+  assert.equal(backs, 2);
   assert.equal(findAll(tree, 'BottomNavigation').length, 0);
 });
 
@@ -131,27 +136,34 @@ test('Paulo Home routes media, converter, PDF and demonstrations to their distin
   const cards = findAll(tree, 'Card');
   assert.equal(cards.length, 3);
   cards.forEach(card => card.props.onPress());
-  assert.deepEqual(tabs, ['downloads', 'pdf']);
-  assert.deepEqual(routes, ['ConvertGalleryVideo']);
+  assert.deepEqual(tabs, ['pdf']);
+  assert.deepEqual(routes, ['MediaDownload', 'ConvertGalleryVideo']);
   findAll(tree, 'Button').forEach(button => button.props.onPress());
-  assert.deepEqual(routes, ['ConvertGalleryVideo', 'ComponentsPreview', 'FilesPreview']);
+  assert.deepEqual(routes, ['MediaDownload', 'ConvertGalleryVideo', 'ComponentsPreview', 'FilesPreview']);
   assert.equal(findAll(tree, 'BottomNavigation').length, 0);
 });
 
-test('Gallery screen labels pending services honestly, preserves gallery feedback and disables Continue', () => {
-  const app = harness('src/screens/ConvertGalleryVideoScreen.js');
+test('Gallery screen labels pending conversion honestly and leaves Continue disabled after canceling the picker', async () => {
+  const pickerOptions = [];
+  const app = harness('src/screens/ConvertGalleryVideoScreen.js', {
+    imagePicker: { async launchImageLibraryAsync(options) { pickerOptions.push(options); return { canceled: true }; } },
+  });
   let backs = 0;
-  const tree = app.render({ navigation: { goBack: () => { backs += 1; } } });
+  const navigation = { goBack: () => { backs += 1; }, navigate: () => assert.fail('No video was selected') };
+  const tree = app.render({ navigation });
   findAll(tree, 'Header')[0].props.onBack();
   assert.equal(backs, 1);
   assert.ok(findAll(tree, 'Header')[0].props.backIcon.endsWith('back-icon.png'));
   const buttons = findAll(tree, 'Button');
   assert.equal(buttons.find(button => button.props.title === 'Continuar').props.disabled, true);
   assert.equal(app.alerts.length, 0);
-  buttons.find(button => button.props.title === 'Abrir galeria').props.onPress();
-  assert.equal(app.alerts.length, 1);
-  assert.ok(app.alerts[0][1].includes('ainda não implementadas'));
-  assert.ok(textContent(tree).includes('serviço pendente'));
+  await buttons.find(button => button.props.title === 'Abrir galeria').props.onPress();
+  assert.deepEqual(Array.from(pickerOptions[0].mediaTypes), ['videos']);
+  assert.equal(app.alerts.length, 0);
+  const continueAfterCancel = findAll(app.render({ navigation }), 'Button').find(button => button.props.title === 'Continuar');
+  assert.equal(continueAfterCancel.props.disabled, true);
+  continueAfterCancel.props.onPress();
+  assert.ok(textContent(tree).includes('A conversão ainda está pendente'));
   assert.ok(textContent(tree).includes('Formatos previstos'));
   assert.equal(findAll(tree, 'BottomNavigation').length, 0);
   assert.equal(Array.from(tree.props.edges).includes('bottom'), true);
@@ -222,13 +234,13 @@ test('Home and conversion keep bounded responsive columns and resize from compac
   }
 });
 
-test('All five Paulo assets decode as PNGs and screen styles use the central palette only', () => {
-  for (const name of ['back-icon', 'check-icon', 'logo-converter', 'logo-home', 'upload-icon']) {
+test('All seven Paulo assets decode as PNGs and screen styles use the central palette only', () => {
+  for (const name of ['back-icon', 'check-icon', 'logo-converter', 'logo-home', 'upload-icon', 'play-icon', 'arrow-right-white']) {
     const png = PNG.sync.read(fs.readFileSync(path.join(root, 'assets/screens', name + '.png')));
     assert.ok(png.width > 0 && png.height > 0);
     assert.ok(png.data.some((value, index) => index % 4 === 3 && value > 0));
   }
-  for (const name of ['HomeScreen', 'ConvertGalleryVideoScreen']) {
+  for (const name of ['HomeScreen', 'ConvertGalleryVideoScreen', 'FormatChoiceScreen']) {
     assert.equal(/#[\da-f]{3,8}\b|rgba?\(/i.test(fs.readFileSync(path.join(root, 'src/screens', name + '.js'), 'utf8')), false);
   }
 });

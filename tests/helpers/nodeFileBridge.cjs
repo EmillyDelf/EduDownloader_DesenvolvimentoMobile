@@ -1,4 +1,5 @@
 const fs = require('node:fs/promises');
+const sync = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const os = require('node:os');
@@ -35,6 +36,7 @@ async function nodeFileBridge(t) {
     async moveAsync({ from, to }) { await fs.rename(local(from), local(to)); },
     async deleteAsync(uri) { counters.deleted.push(uri); await fs.rm(local(uri), { force: true }); },
     async getContentUriAsync(uri) { await fs.access(local(uri)); return 'content://test-file-provider/' + path.basename(local(uri)); },
+    async getFreeDiskStorageAsync() { return Number.MAX_SAFE_INTEGER; },
     createDownloadResumable(url, uri, options, progress) {
       let request;
       let response;
@@ -73,7 +75,43 @@ async function nodeFileBridge(t) {
       };
     },
   };
-  return { fs: bridge, root, counters, local };
+  class File {
+    constructor(base, name) { this.uri = name ? base.uri.replace(/\/$/, '') + '/' + name : base; }
+    get exists() { return sync.existsSync(local(this.uri)); }
+    get size() { return sync.statSync(local(this.uri)).size; }
+    create() { sync.closeSync(sync.openSync(local(this.uri), 'wx')); }
+    bytes() { return fs.readFile(local(this.uri)); }
+    write(bytes) { return fs.writeFile(local(this.uri), bytes); }
+    delete() { sync.unlinkSync(local(this.uri)); }
+    copy(directory, { overwrite } = {}) {
+      const target = directory instanceof File ? local(directory.uri) : path.join(local(directory.uri), path.basename(local(this.uri)));
+      return fs.copyFile(local(this.uri), target,
+        overwrite ? 0 : sync.constants.COPYFILE_EXCL);
+    }
+    open(mode) {
+      const opened = fs.open(local(this.uri), mode);
+      return {
+        offset: 0,
+        async readBytes(length) {
+          const bytes = Buffer.allocUnsafe(length);
+          const { bytesRead } = await (await opened).read(bytes, 0, length, this.offset);
+          this.offset += bytesRead;
+          return bytes.subarray(0, bytesRead);
+        },
+        async writeBytes(bytes) { await (await opened).writeFile(bytes); },
+        async close() { await (await opened).close(); },
+      };
+    }
+    async move(destination) {
+      await fs.link(local(this.uri), local(destination.uri));
+      await fs.unlink(local(this.uri));
+    }
+  }
+  class Directory {
+    constructor(base, name) { this.uri = name ? base.replace(/\/$/, '') + '/' + name : base; }
+    create() { sync.mkdirSync(local(this.uri), { recursive: true }); }
+  }
+  return { fs: bridge, root, counters, local, File, Directory, FileMode: { ReadOnly: 'r', WriteOnly: 'r+' } };
 }
 
 module.exports = { nodeFileBridge };

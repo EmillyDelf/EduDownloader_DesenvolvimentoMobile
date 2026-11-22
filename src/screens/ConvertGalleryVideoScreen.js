@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import Header from '../components/Header';
 import Card from '../components/Card';
@@ -14,11 +15,22 @@ import {
   responsive,
   typography,
 } from '../styles';
+import { formatFileSize } from './fileScreenUtils';
 
 const converterLogo = require('../../assets/screens/logo-converter.png');
 const backIcon = require('../../assets/screens/back-icon.png');
 const uploadIcon = require('../../assets/screens/upload-icon.png');
 const checkIcon = require('../../assets/screens/check-icon.png');
+
+function formatDuration(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) return '';
+  const seconds = Math.floor(milliseconds / 1000);
+  const parts = [Math.floor(seconds / 60) % 60, seconds % 60]
+    .map(part => String(part).padStart(2, '0'));
+  const hours = Math.floor(seconds / 3600);
+  if (hours) parts.unshift(String(hours));
+  return parts.join(':');
+}
 
 export default function ConvertGalleryVideoScreen({ navigation }) {
   const screen = responsive.useResponsive();
@@ -28,12 +40,36 @@ export default function ConvertGalleryVideoScreen({ navigation }) {
   const uploadIconSize = screen.scaleSize(23, { min: 20, max: 28 });
   const badgeCircleSize = screen.scaleSize(40, { min: 36, max: 46 });
   const checkIconSize = screen.scaleSize(20, { min: 18, max: 24 });
+  const [video, setVideo] = useState(null);
+  const [pickingVideo, setPickingVideo] = useState(false);
+  const pickerOpen = useRef(false);
 
-  function handleOpenGallery() {
-    Alert.alert(
-      'Abrir galeria',
-      'Seleção de vídeo e conversão ainda não implementadas. Nenhum arquivo será aberto ou convertido.'
-    );
+  async function handleOpenGallery() {
+    if (pickerOpen.current) return;
+    pickerOpen.current = true;
+    setPickingVideo(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'] });
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (!asset?.uri || (asset.type && asset.type !== 'video')) {
+        Alert.alert('Vídeo indisponível', 'Selecione um vídeo da galeria.');
+        return;
+      }
+      setVideo({
+        videoName: asset.fileName?.trim() || 'Vídeo selecionado',
+        videoDetails: [formatDuration(asset.duration), formatFileSize(asset.fileSize)].filter(Boolean).join(' • '),
+      });
+    } catch {
+      Alert.alert('Não foi possível abrir a galeria', 'Verifique se o aplicativo tem acesso aos vídeos e tente novamente.');
+    } finally {
+      pickerOpen.current = false;
+      setPickingVideo(false);
+    }
+  }
+
+  function handleContinue() {
+    if (video && !pickerOpen.current) navigation.navigate('FormatChoice', video);
   }
 
   return (
@@ -94,7 +130,7 @@ export default function ConvertGalleryVideoScreen({ navigation }) {
                 },
               ]}
             >
-              Prévia da interface. Seleção e conversão ainda não disponíveis.
+              Selecione um vídeo e confira as opções de áudio. A conversão ainda está pendente.
             </Text>
           </View>
 
@@ -136,7 +172,7 @@ export default function ConvertGalleryVideoScreen({ navigation }) {
                 },
               ]}
             >
-              Selecione o Video
+              Selecione o vídeo
             </Text>
 
             <Text
@@ -156,6 +192,7 @@ export default function ConvertGalleryVideoScreen({ navigation }) {
               title='Abrir galeria'
               size='md'
               fullWidth={false}
+              disabled={pickingVideo}
               onPress={handleOpenGallery}
               style={styles.galleryButton}
               textStyle={{ fontSize: screen.scaleFont(14, { min: 13, max: 16 }) }}
@@ -215,13 +252,13 @@ export default function ConvertGalleryVideoScreen({ navigation }) {
 
           <Button
             title='Continuar'
-            disabled
-            onPress={() => {}}
+            disabled={!video || pickingVideo}
+            onPress={handleContinue}
             style={[
-              styles.continueButtonDisabled,
+              (!video || pickingVideo) && styles.continueButtonDisabled,
               { marginTop: screen.scaleSize(16, { min: 12, max: 20 }) },
             ]}
-            textStyle={styles.continueButtonTextDisabled}
+            textStyle={(!video || pickingVideo) ? styles.continueButtonTextDisabled : undefined}
           />
 
           <Text
@@ -234,7 +271,7 @@ export default function ConvertGalleryVideoScreen({ navigation }) {
               },
             ]}
           >
-            Nenhum vídeo selecionado · serviço pendente
+            {video?.videoName || 'Nenhum vídeo selecionado'}
           </Text>
         </View>
       </ScrollView>

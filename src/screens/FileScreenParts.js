@@ -20,9 +20,13 @@ export function FileFilters({ options, value, onChange }) {
           accessibilityRole='button'
           accessibilityLabel={option.label}
           accessibilityState={{ selected: value === option.id }}
-          style={({ pressed }) => [buttonStyles.chip, value === option.id && buttonStyles.chipActive, pressed && buttonStyles.pressed]}
+          hitSlop={{ top: 4, bottom: 4 }}
+          style={({ pressed }) => [
+            buttonStyles.chip, styles.filter, { minWidth: option.width },
+            value === option.id && styles.filterActive, pressed && buttonStyles.pressed,
+          ]}
         >
-          <Text style={value === option.id ? buttonStyles.chipTextActive : buttonStyles.chipText}>{option.label}</Text>
+          <Text style={value === option.id ? [buttonStyles.chipTextActive, styles.filterTextActive] : [buttonStyles.chipText, styles.filterText]}>{option.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -46,4 +50,10 @@ export function FileStatus({ status }) {
       <Text style={styles.badgeText}>{getStatusLabel(status)}</Text>
     </View>
   );
+}
+
+export function FileAvailability({ item }) {
+  const messages = { missing: 'Arquivo movido ou removido', unavailable: 'Arquivo indisponível', deleted: 'Arquivo excluído do dispositivo' };
+  const message = item.deletionPending ? 'Exclusão pendente. Atualize a biblioteca.' : messages[item.availability];
+  return message ? <Text style={styles.metadata} accessibilityLiveRegion='polite'>{message}</Text> : null;
 }
