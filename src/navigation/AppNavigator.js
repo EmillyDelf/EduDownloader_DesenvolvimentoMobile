@@ -9,12 +9,15 @@ import DownloadsScreen from '../screens/DownloadsScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import ConvertGalleryVideoScreen from '../screens/ConvertGalleryVideoScreen';
 import FormatChoiceScreen from '../screens/FormatChoiceScreen';
+import ConversionProgressScreen from '../screens/ConversionProgressScreen';
+import ConversionCompleteScreen from '../screens/ConversionCompleteScreen';
 import MediaDownloadForm from '../screens/MediaDownloadForm';
 import SelectImagesScreen from '../screens/SelectImagesScreen';
 import OrganizeImagesScreen from '../screens/OrganizeImagesScreen';
 import PdfSettingsScreen from '../screens/PdfSettingsScreen';
 import PdfProgressScreen from '../screens/PdfProgressScreen';
 import PdfCompleteScreen from '../screens/PdfCompleteScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import ComponentsPreview from '../dev/ComponentsPreview';
 import DownloadsHistoryPreview from '../dev/DownloadsHistoryPreview';
 import BottomNavigation from '../components/BottomNavigation';
@@ -180,7 +183,7 @@ export function MainTabs({ navigation, downloadProps = {}, historyProps = {} }) 
     downloads: <DownloadsScreen {...downloads} onBack={home} showBack={false} onTabPress={undefined} safeAreaEdges={contentEdges} />,
     history: <HistoryScreen {...history} onBack={home} showBack={false} onTabPress={undefined} safeAreaEdges={contentEdges} />,
     pdf: renderPdfStep(),
-    profile: <PendingScreen title='Perfil' onBack={home} />,
+    profile: <ProfileScreen safeAreaEdges={contentEdges} />,
   };
 
   return (
@@ -196,8 +199,8 @@ export function MainTabs({ navigation, downloadProps = {}, historyProps = {} }) 
           {screens[tab]}
         </View>
       ))}
-      <BottomNavigation activeTab={activeTab} onTabPress={selectTab} variant={activeTab === 'downloads' || activeTab === 'history' ? 'library' : 'default'} />
-      <StatusBar style={['home', 'downloads', 'history'].includes(activeTab) ? 'light' : 'dark'} />
+      <BottomNavigation activeTab={activeTab} onTabPress={selectTab} variant={['downloads', 'history', 'profile'].includes(activeTab) ? 'library' : 'default'} />
+      <StatusBar style={['home', 'downloads', 'history', 'profile'].includes(activeTab) ? 'light' : 'dark'} />
     </View>
   );
 }
@@ -220,6 +223,8 @@ export default function AppNavigator({ downloadProps, historyProps }) {
         </Stack.Screen>
         <Stack.Screen name='ConvertGalleryVideo' component={ConvertGalleryVideoScreen} />
         <Stack.Screen name='FormatChoice' component={FormatChoiceScreen} />
+        <Stack.Screen name='ConversionProgress' component={ConversionProgressScreen} />
+        <Stack.Screen name='ConversionComplete' component={ConversionCompleteScreen} />
         <Stack.Screen name='ComponentsPreview' component={ComponentsPreview} />
         <Stack.Screen name='FilesPreview' component={FilesPreviewRoute} />
         <Stack.Screen name='MediaDownload' component={MediaDownloadRoute} />
