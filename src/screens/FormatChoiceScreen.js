@@ -54,6 +54,14 @@ export default function FormatChoiceScreen({ navigation, route }) {
   function handleConvert() {
     if (!videoName) return;
     const selected = QUALITY_OPTIONS.find(option => option.id === selectedQuality);
+    if (typeof navigation?.navigate === 'function') {
+      navigation.navigate('ConversionProgress', {
+        videoName,
+        videoDetails,
+        quality: selected.title,
+      });
+      return;
+    }
     Alert.alert(
       'Conversão para áudio',
       `Qualidade selecionada: ${selected.title}. O processamento e a exportação de áudio ainda estão pendentes.`,
